@@ -1,3 +1,3 @@
-class SXAdaptor_WSL2:
-    def __init__(self):
+class SXLocalAdaptor:
+    def __init__(self, codegen, science_runner):
         pass

@@ -2,6 +2,7 @@
     "cSpell.words": [
         "asyncio",
         "autodoc",
+        "codegen",
         "copybutton",
         "furo",
         "pydantic",
