@@ -10,7 +10,7 @@ def test_adaptor_xaod_wsl2():
 
     adaptor = SXLocalAdaptor(codegen, science_runner)
 
-    # The simple query
+    # The simple query, take straight from the example in the documentation.
     query = q.FuncADL_ATLASr22()  # type: ignore
     jets_per_event = query.Select(lambda e: e.Jets("AnalysisJets"))
     jet_info_per_event = jets_per_event.Select(
