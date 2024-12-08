@@ -7,7 +7,6 @@ from servicex import query as q, deliver, dataset
 def test_adaptor_xaod_wsl2():
     codegen = LocalXAOD()
     science_runner = ScienceWSL2("atlas_al9", "22.2.107")
-
     adaptor = SXLocalAdaptor(codegen, science_runner)
 
     # The simple query, take straight from the example in the documentation.
