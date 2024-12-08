@@ -8,6 +8,7 @@
         "pydantic",
         "pyproject",
         "sdist",
+        "sslhep",
         "xaodr"
     ]
 }
