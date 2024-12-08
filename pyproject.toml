@@ -25,7 +25,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Physics",
 ]
-dependencies = ["servicex>=3.0.0"]
+dependencies = ["servicex>=3.0.0", "tenacity"]
 
 [project.urls]
 # Documentation = "https://servicex.readthedocs.io/"

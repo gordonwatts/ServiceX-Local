@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 
 import requests
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 
 class SXCodeGen(ABC):
@@ -63,6 +64,7 @@ class DockerCodegen(SXCodeGen):
         """
         safe_image = self.image_name.replace(":", "_").replace("/", "_")
         container_name = f"sx_codegen_container_{safe_image}"
+
         try:
             # Run the docker container in the background
             subprocess.run(
@@ -71,7 +73,6 @@ class DockerCodegen(SXCodeGen):
                     "run",
                     "--name",
                     container_name,
-                    "--rm",  # Automatically remove the container when it exits
                     "-d",  # Run in detached mode
                     "-v",
                     f"{directory}:/output",
@@ -84,17 +85,24 @@ class DockerCodegen(SXCodeGen):
             )
 
             # Next, run the query against the code generator.
-            post_url = f"http://localhost:{5000}"
-            postObj = {"code": query}
-            result = requests.post(post_url + "/servicex/generated-code", json=postObj)
-            result.raise_for_status()
+            @retry(stop=stop_after_attempt(10), wait=wait_fixed(1))
+            def run_query(query: str):
+                post_url = f"http://localhost:{5000}"
+                postObj = {"code": query}
+                result = requests.post(
+                    post_url + "/servicex/generated-code", json=postObj
+                )
+                result.raise_for_status()
+
+            run_query(query)
         except subprocess.CalledProcessError as e:
             raise RuntimeError(
                 f"Failed to start docker container: {e.stderr.decode('utf-8')}"
             )
         finally:
             # Ensure the container is stopped and removed
-            subprocess.run(["docker", "rm", "-f", container_name], check=False)
+            # subprocess.run(["docker", "rm", "-f", container_name], check=False)
+            pass
 
         # The request should come back as a zip file. We now unpack that.
         return directory
