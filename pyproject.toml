@@ -68,3 +68,6 @@ packages = ["servicex_local"]
 
 [tool.coverage.run]
 dynamic_context = "test_function"
+
+[tool.flake8]
+max-line-length = 99
