@@ -5,6 +5,7 @@
         "codegen",
         "copybutton",
         "furo",
+        "genfiles",
         "pydantic",
         "pyproject",
         "sdist",
