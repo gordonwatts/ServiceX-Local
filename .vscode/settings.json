@@ -8,6 +8,9 @@
         "pydantic",
         "pyproject",
         "sdist",
+        "sslhep",
+        "toolbelt",
+        "treename",
         "xaodr"
     ]
 }
