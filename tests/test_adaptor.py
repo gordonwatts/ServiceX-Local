@@ -1,11 +1,11 @@
 import pytest
-from servicex_local import ScienceWSL2, LocalXAOD, SXLocalAdaptor
+from servicex_local import ScienceWSL2, LocalXAODCodegen, SXLocalAdaptor
 from servicex import query as q, deliver, dataset
 
 
 @pytest.mark.skip(reason="This integration test is not ready to run")
 def test_adaptor_xaod_wsl2():
-    codegen = LocalXAOD()
+    codegen = LocalXAODCodegen()
     science_runner = ScienceWSL2("atlas_al9", "22.2.107")
     adaptor = SXLocalAdaptor(codegen, science_runner)
 
