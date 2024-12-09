@@ -98,7 +98,8 @@ class DockerScienceImage(BaseScienceImage):
         if x509up_path.exists():
             x509up_volume = ["-v", f"{x509up_path}:/tmp/grid-security/x509up"]
         else:
-            logging.warning("x509up certificate not found at /tmp/x509up")
+            logger = logging.getLogger(__name__)
+            logger.warning("x509up certificate not found at /tmp/x509up")
             x509up_volume = []
 
         for input_file in input_files:
