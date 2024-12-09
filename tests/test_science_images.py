@@ -1,8 +1,11 @@
 import shutil
 import os
+
+import pytest
 from servicex_local.science_images import DockerScienceImage
 
 
+@pytest.mark.skip(reason="This test needs docker to be installed")
 def test_docker_science(tmp_path):
     "Run a simple test of the docker science image"
 
