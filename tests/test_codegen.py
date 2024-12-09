@@ -1,9 +1,9 @@
-from pytest import skip
+import pytest
 from servicex_local import DockerCodegen
 from pathlib import Path
 
 
-@skip("This test requires docker to be installed")
+@pytest.mark.skip("This test requires docker to be installed")
 def test_docker_codegen_xaod(tmp_path):
     "Do a basic func_adl uproot code generation from an official docker image"
 
