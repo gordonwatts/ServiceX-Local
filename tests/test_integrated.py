@@ -1,7 +1,9 @@
+import pytest
 from servicex_local.codegen import DockerCodegen
 from servicex_local.science_images import DockerScienceImage
 
 
+@pytest.mark.skip(reason="This test needs docker to be installed")
 def test_katan_example(tmp_path):
     "Run simple"
 

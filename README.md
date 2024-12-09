@@ -44,3 +44,7 @@ To use this, example code is as follows:
     files = deliver(spec, servicex_name="servicex-uc-af", sx_adaptor=adaptor)
     assert files is not None, "No files returned from deliver! Internal error"
 ```
+
+## Acknowledgments
+
+This `docker` versions of this code are thanks to @ketan96-m's work on [this Service MR](https://github.com/ssl-hep/ServiceX/pull/828).
