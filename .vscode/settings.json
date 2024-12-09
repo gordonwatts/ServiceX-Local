@@ -5,12 +5,17 @@
         "codegen",
         "copybutton",
         "furo",
+        "genfiles",
+        "globus",
         "pydantic",
         "pyproject",
         "sdist",
         "sslhep",
         "toolbelt",
         "treename",
+        "usercert",
+        "userkey",
+        "voms",
         "xaodr"
     ]
 }

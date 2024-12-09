@@ -7,6 +7,8 @@ mostly geared toward running for debugging and testing.
 
 Install this as a library in your virtual environment with `pip install servicex-local`.
 
+Use the `voms_proxy_init` command to init your proxy. It will need the location of your `~/.globus` directory.
+
 ## Usage
 
 To use this, example code is as follows:

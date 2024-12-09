@@ -25,7 +25,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Physics",
 ]
-dependencies = ["servicex>=3.0.0", "tenacity", "requests-toolbelt"]
+dependencies = ["servicex>=3.0.0", "tenacity", "requests-toolbelt", "click"]
 
 [project.urls]
 # Documentation = "https://servicex.readthedocs.io/"
@@ -57,6 +57,9 @@ docs = [
     "sphinx-copybutton>=0.5.2",
 ]
 develop = ["servicex[test,docs]"]
+
+[project.scripts]
+voms_proxy_init = "servicex_local.create_x509:main"
 
 [tool.hatch.build.targets.sdist]
 # hatchling always includes:
