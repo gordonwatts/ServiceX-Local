@@ -27,7 +27,7 @@ jobs:
 
       - name: Run flake8
         run: |
-          flake8 --max-line-length 99 --exclude test/*/* .
+          flake8 --max-line-length 99 --exclude tests/*/* .
 
   test:
     needs: lint
