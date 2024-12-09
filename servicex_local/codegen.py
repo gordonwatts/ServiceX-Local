@@ -1,4 +1,7 @@
 from abc import ABC, abstractmethod
+from io import BytesIO
+from zipfile import ZipFile
+from requests_toolbelt.multipart import decoder
 from pathlib import Path
 import subprocess
 
@@ -60,7 +63,7 @@ class DockerCodegen(SXCodeGen):
             directory (Path): Where the output files should be written.
 
         Returns:
-            Path: Directory where all results were written.
+            Path: compressed file containing all the code required.
         """
         safe_image = self.image_name.replace(":", "_").replace("/", "_")
         container_name = f"sx_codegen_container_{safe_image}"
@@ -89,20 +92,27 @@ class DockerCodegen(SXCodeGen):
             def run_query(query: str):
                 post_url = f"http://localhost:{5000}"
                 postObj = {"code": query}
-                result = requests.post(
-                    post_url + "/servicex/generated-code", json=postObj
-                )
-                result.raise_for_status()
+                r = requests.post(post_url + "/servicex/generated-code", json=postObj)
+                r.raise_for_status()
+                return r
 
-            run_query(query)
+            result = run_query(query)
         except subprocess.CalledProcessError as e:
             raise RuntimeError(
                 f"Failed to start docker container: {e.stderr.decode('utf-8')}"
             )
         finally:
             # Ensure the container is stopped and removed
-            # subprocess.run(["docker", "rm", "-f", container_name], check=False)
-            pass
+            subprocess.run(["docker", "rm", "-f", container_name], check=False)
+
+        # Unpack the files into a zip file and store them.
+        decoder_parts = decoder.MultipartDecoder.from_response(result)
+        zipfile_content = decoder_parts.parts[3].content
+        zipfile = ZipFile(BytesIO(zipfile_content))
+
+        if not directory.exists():
+            directory.mkdir(parents=True)
+        zipfile.extractall(directory)
 
         # The request should come back as a zip file. We now unpack that.
         return directory
