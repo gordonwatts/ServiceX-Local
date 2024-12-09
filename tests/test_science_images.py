@@ -9,6 +9,8 @@ def test_docker_science(tmp_path):
     # We need the files we'll use as input.
     generated_file_directory = tmp_path / "input"
     generated_file_directory.mkdir()
+    output_file_directory = tmp_path / "output"
+    output_file_directory.mkdir()
 
     source_directory = "./tests/genfiles_raw"
     for file_name in os.listdir(source_directory):
@@ -23,7 +25,9 @@ def test_docker_science(tmp_path):
         "rucio/user/mgeyik/e7/ee/user.mgeyik.30182995._000093.out.root"
     ]
     docker = DockerScienceImage("sslhep/servicex_func_adl_uproot_transformer:uproot5")
-    output_files = docker.transform(generated_file_directory, input_files)
+    output_files = docker.transform(
+        generated_file_directory, input_files, output_file_directory, "root-file"
+    )
 
     assert len(output_files) == 1
     assert output_files[0].exists()
