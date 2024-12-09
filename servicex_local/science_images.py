@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 import subprocess
 from typing import List
+import logging
 
 
 class BaseScienceImage(ABC):
@@ -93,6 +94,13 @@ class DockerScienceImage(BaseScienceImage):
             List[Path]: The paths to the output files
         """
         output_paths = []
+        x509up_path = Path("/tmp/x509up")
+        if x509up_path.exists():
+            x509up_volume = ["-v", f"{x509up_path}:/tmp/grid-security/x509up"]
+        else:
+            logging.warning("x509up certificate not found at /tmp/x509up")
+            x509up_volume = []
+
         for input_file in input_files:
             safe_image = self.image_name.replace(":", "_").replace("/", "_")
             container_name = (
@@ -113,6 +121,7 @@ class DockerScienceImage(BaseScienceImage):
                         f"{generated_files_dir}:/generated",
                         "-v",
                         f"{output_directory}:/servicex/output",
+                        *x509up_volume,
                         self.image_name,
                         "python",
                         "/generated/transform_single_file.py",
