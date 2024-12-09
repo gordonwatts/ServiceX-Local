@@ -42,7 +42,7 @@ voms-proxy-init -voms atlas -cert /tmp/usercert.pem -key /tmp/userkey.pem -out /
 
     # Create the docker script
     temp_dir = tempfile.gettempdir()
-    script_path = create_docker_script(temp_dir)
+    create_docker_script(temp_dir)
 
     # Now run the docker image that will run the script.
     subprocess.run(
