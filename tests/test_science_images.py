@@ -41,15 +41,16 @@ def test_docker_science(tmp_path):
 def test_wsl2_science(tmp_path):
     "Test a xAOD transform on a WSL2 atlas distribution"
 
-    wsl2 = WSL2ScienceImage("atlas_al9", "24.2.12")
-    wsl2.transform(
+    wsl2 = WSL2ScienceImage("atlas_al9", "25.2.12")
+    outputs = wsl2.transform(
         Path("tests/genfiles_raw/query2_xaod"),
         [
             "root://eospublic.cern.ch//eos/opendata/atlas/rucio/mc20_13TeV/"
             "DAOD_PHYSLITE.37622528._000013.pool.root.1"
         ],
-        tmp_path,
+        tmp_path / "output",
         "root-file",
     )
 
-    assert False
+    assert len(outputs) == 1
+    outputs[0].exists()

@@ -129,3 +129,5 @@ dmypy.json
 
 # Other things
 servicex.yaml
+
+wsl_transform_script.sh
