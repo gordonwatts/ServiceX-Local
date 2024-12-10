@@ -97,9 +97,9 @@ class WSL2ScienceImage(BaseScienceImage):
 tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
 cd $tmp_dir
 
-source /etc/profile.d/startup-atlas.sh
+# source /etc/profile.d/startup-atlas.sh
 setupATLAS
-asetup AnalysisBase,${self._release},here
+asetup AnalysisBase,{self._release},here
 source {wsl_generated_files_dir}/transform_single_file.sh {wsl_input_file} {wsl_output_directory}/{input_path_name}
 """
 
@@ -116,7 +116,7 @@ source {wsl_generated_files_dir}/transform_single_file.sh {wsl_input_file} {wsl_
             os.chmod(script_path, 0o755)
 
             # Call the WSL command via os.system
-            command = f"wsl -d {self._container} bash {wsl_script_path}"
+            command = f"wsl -d {self._container} bash -i {wsl_script_path}"
             r = os.system(command)
             if r != 0:
                 raise RuntimeError(f"Failed to run command: {r} - {command}")
