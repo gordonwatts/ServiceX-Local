@@ -4,6 +4,7 @@ from zipfile import ZipFile
 from requests_toolbelt.multipart import decoder
 from pathlib import Path
 import subprocess
+import shutil
 
 import requests
 from tenacity import retry, stop_after_attempt, wait_fixed
@@ -31,14 +32,46 @@ class SXCodeGen(ABC):
 
 class LocalXAODCodegen(SXCodeGen):
     def __init__(self):
-        """Create a code-generator for func_adl running on xAOD.
-
-        Local code (e.g. the func_adl_xAOD package must be installed) is used.
+        """Create a code-generator for func_adl running on xAOD, run against
+        a `func_adl_xAOD` library that is installed locally.
         """
         pass
 
     def gen_code(self, query: str, directory: Path) -> Path:
-        raise NotImplementedError("gen_code method is not implemented for LocalXAOD")
+        """Generate the code and return a path to the directory where the code is stored.
+
+        Args:
+            query (str): The quastle/ query for an xAOD file.
+            directory (Path): Where the output files should be written.
+
+        Returns:
+            Path: The directory where the path should be written
+
+        Notes:
+            * We do imports internally so that no dependency is required if this doesn't run.
+        """
+        # Convert the qastle into a python AST
+        from qastle import text_ast_to_python_ast
+
+        body = text_ast_to_python_ast(query).body
+
+        if len(body) != 1:
+            raise ValueError(
+                f'Requested codegen for "{query}" yielded no code statements (or too many).'
+            )
+        a = body[0].value
+
+        # Generate and write out the code
+        from func_adl_xAOD.atlas.xaod.executor import atlas_xaod_executor
+
+        exe = atlas_xaod_executor()
+        exe.write_cpp_files(exe.apply_ast_transformations(a), directory)
+
+        # Copy the template file to the directory
+        template_file = Path(__file__).parent / "templates" / "transform_single_file.sh"
+        shutil.copy(template_file, directory)
+
+        return directory
 
 
 class DockerCodegen(SXCodeGen):
