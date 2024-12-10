@@ -100,7 +100,7 @@ cd $tmp_dir
 # source /etc/profile.d/startup-atlas.sh
 setupATLAS
 asetup AnalysisBase,{self._release},here
-source {wsl_generated_files_dir}/transform_single_file.sh {wsl_input_file} {wsl_output_directory}/{input_path_name}
+source {wsl_generated_files_dir}/transform_single_file.sh {wsl_input_file} {wsl_output_directory}/{input_path_name}  # noqa
 """
 
             # Write the script to a temporary file
