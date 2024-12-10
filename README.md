@@ -5,11 +5,21 @@ mostly geared toward running for debugging and testing.
 
 ## Installation
 
-Install this as a library in your virtual environment with `pip install servicex-local`.
+Install this as a library in your virtual environment with:
 
-Use the `voms_proxy_init` command to init your proxy. It will need the location of your `~/.globus` directory.
+* `pip install servicex-local` for all the Docker based codegen and science container access.
+* `pip install servicex-local[xAOD]` to get a local xAOD code generator (and the required dependencies) along with the docker based code.
+
+Some science images requires a x509 certificate to run. You'll need to get the `x509up` into your `/tmp` area. If you don't have the tools installed locally, do the following:
+
+1. Make sure in your `~/.globus` directory (on whatever OS you are no) contains the `usercert.pem` and `userkey.pem` files
+1. Use the `voms_proxy_init` to initialize against the `atlas` voms.
+
+The science image code will pick up the location of the 509 cert.
 
 ## Usage
+
+This text is a **DRAFT**
 
 To use this, example code is as follows:
 
