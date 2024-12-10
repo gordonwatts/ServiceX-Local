@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 from typing import List
 import logging
+import os
 
 
 class BaseScienceImage(ABC):
@@ -57,8 +58,29 @@ class WSL2ScienceImage(BaseScienceImage):
         Returns:
             List[Path]: The paths to the output files
         """
-        # Implement the transformation logic here
-        raise NotImplementedError("This WSL2 Sci Image is not implemented yet")
+        output_paths = []
+
+        # Translate output_directory to WSL2 path
+        wsl_output_directory = (
+            f"/mnt/{output_directory.drive[0].lower()}{output_directory.as_posix()[2:]}"
+        )
+
+        for input_file in input_files:
+            # Translate input_file to WSL2 path
+            input_path = Path(input_file)
+            wsl_input_file = (
+                f"/mnt/{input_path.drive[0].lower()}{input_path.as_posix()[2:]}"
+            )
+
+            # Call the WSL command via os.system
+            command = (
+                f"wsl -d {self._container} bash {generated_files_dir}/transform_single_file.sh "
+                f"{wsl_input_file} {wsl_output_directory}/{input_path.name}"
+            )
+            os.system(command)
+            output_paths.append(output_directory / input_path.name)
+
+        return output_paths
 
 
 class DockerScienceImage(BaseScienceImage):

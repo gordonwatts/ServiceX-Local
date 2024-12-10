@@ -1,8 +1,10 @@
-import shutil
 import os
+import shutil
+from pathlib import Path
 
 import pytest
-from servicex_local.science_images import DockerScienceImage
+
+from servicex_local.science_images import DockerScienceImage, WSL2ScienceImage
 
 
 @pytest.mark.skip(reason="This test needs docker to be installed")
@@ -15,7 +17,7 @@ def test_docker_science(tmp_path):
     output_file_directory = tmp_path / "output"
     output_file_directory.mkdir()
 
-    source_directory = "./tests/genfiles_raw"
+    source_directory = "./tests/genfiles_raw/query1_raw"
     for file_name in os.listdir(source_directory):
         full_file_name = os.path.join(source_directory, file_name)
         if os.path.isfile(full_file_name):
@@ -34,3 +36,20 @@ def test_docker_science(tmp_path):
 
     assert len(output_files) == 1
     assert output_files[0].exists()
+
+
+def test_wsl2_science(tmp_path):
+    "Test a xAOD transform on a WSL2 atlas distribution"
+
+    wsl2 = WSL2ScienceImage("atlas_al9", "24.2.12")
+    wsl2.transform(
+        Path("tests/genfiles_raw/query2_xaod"),
+        [
+            "root://eospublic.cern.ch//eos/opendata/atlas/rucio/mc20_13TeV/"
+            "DAOD_PHYSLITE.37622528._000013.pool.root.1"
+        ],
+        tmp_path,
+        "root-file",
+    )
+
+    assert False
