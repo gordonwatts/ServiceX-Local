@@ -35,6 +35,6 @@ def test_adaptor_xaod_wsl2():
             }
         ]
     }
-    files = deliver(spec, servicex_name="servicex-uc-af")  # , sx_adaptor=adaptor)
+    files = deliver(spec, servicex_name="servicex-uc-af", sx_adaptor=adaptor)
     assert files is not None, "No files returned from deliver! Internal error"
     assert False
