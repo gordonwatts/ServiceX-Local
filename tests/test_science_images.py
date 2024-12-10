@@ -39,7 +39,11 @@ def test_docker_science(tmp_path):
 
 
 def test_wsl2_science(tmp_path):
-    "Test a xAOD transform on a WSL2 atlas distribution"
+    """Test a xAOD transform on a WSL2 atlas distribution
+    This test takes about 100 seconds to run on a connection
+    that is reasonable (at home). Takes 300 to 400 seconds if
+    cvmfs is cold.
+    """
 
     wsl2 = WSL2ScienceImage("atlas_al9", "25.2.12")
     outputs = wsl2.transform(
