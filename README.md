@@ -19,7 +19,7 @@ The science image code will pick up the location of the 509 cert.
 
 ## Usage
 
-**DRAFT**
+This text is a **DRAFT**
 
 To use this, example code is as follows:
 
