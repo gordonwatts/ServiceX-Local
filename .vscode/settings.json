@@ -9,6 +9,7 @@
         "globus",
         "pydantic",
         "pyproject",
+        "qastle",
         "sdist",
         "sslhep",
         "toolbelt",
