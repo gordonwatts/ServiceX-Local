@@ -5,6 +5,7 @@
         "autodoc",
         "codegen",
         "copybutton",
+        "cvmfs",
         "furo",
         "genfiles",
         "globus",
