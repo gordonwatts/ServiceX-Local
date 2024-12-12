@@ -16,13 +16,22 @@ import uuid
 class SXLocalAdaptor:
 
     def __init__(
-        self, codegen: SXCodeGen, science_runner: BaseScienceImage, codegen_name: str, url: str
+        self,
+        codegen: SXCodeGen,
+        science_runner: BaseScienceImage,
+        codegen_name: str,
+        url: str,
     ):
         self.codegen = codegen
         self.science_runner = science_runner
         self.codegen_name = codegen_name
         self.url = url
         self.transform_status_store: Dict[str, TransformStatus] = {}
+
+    async def _get_authorization(self):
+        "Dummied out"
+        # TODO: Why is this method start with a `_`?
+        pass
 
     async def get_transforms(self) -> List[TransformStatus]:
         # Implement local logic to get transforms

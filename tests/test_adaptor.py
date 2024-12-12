@@ -23,7 +23,7 @@ def test_adaptor_xaod_wsl2():
     codegen = LocalXAODCodegen()
     science_runner = WSL2ScienceImage("atlas_al9", "22.2.107")
     adaptor = SXLocalAdaptor(
-        codegen, science_runner, "atlasr21", "http://localhost:5000"
+        codegen, science_runner, "atlasr22", "http://localhost:5001"
     )
     minio = MinioLocalAdaptor("my_bucket")
 
