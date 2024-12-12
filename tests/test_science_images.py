@@ -38,6 +38,7 @@ def test_docker_science(tmp_path):
     assert output_files[0].exists()
 
 
+@pytest.mark.skip(reason="This test needs wsl2 to be installed")
 def test_wsl2_science(tmp_path):
     """Test a xAOD transform on a WSL2 atlas distribution
     This test takes about 100 seconds to run on a connection
