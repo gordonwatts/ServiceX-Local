@@ -21,7 +21,7 @@ from servicex_local.adaptor import MinioLocalAdaptor
 
 def test_adaptor_xaod_wsl2():
     codegen = LocalXAODCodegen()
-    science_runner = WSL2ScienceImage("atlas_al9", "22.2.107")
+    science_runner = WSL2ScienceImage("atlas_al9", "25.2.12")
     adaptor = SXLocalAdaptor(
         codegen, science_runner, "atlasr22", "http://localhost:5001"
     )
@@ -45,7 +45,8 @@ def test_adaptor_xaod_wsl2():
                 "Name": "func_adl_xAOD_simple",
                 "Dataset": dataset.FileList(
                     [
-                        "tests/test.root",  # noqa: E501
+                        "root://eospublic.cern.ch//eos/opendata/atlas/rucio/mc20_13TeV/"
+                        "DAOD_PHYSLITE.37622528._000013.pool.root.1"
                     ]
                 ),
                 "Query": jet_info_per_event,
