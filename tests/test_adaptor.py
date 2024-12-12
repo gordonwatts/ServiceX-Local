@@ -19,11 +19,13 @@ from servicex_local import LocalXAODCodegen, SXLocalAdaptor, WSL2ScienceImage
 from servicex_local.adaptor import MinioLocalAdaptor
 
 
-@pytest.mark.skip(reason="This integration test is not ready to run")
 def test_adaptor_xaod_wsl2():
     codegen = LocalXAODCodegen()
     science_runner = WSL2ScienceImage("atlas_al9", "22.2.107")
-    adaptor = SXLocalAdaptor(codegen, science_runner)
+    adaptor = SXLocalAdaptor(
+        codegen, science_runner, "atlasr21", "http://localhost:5000"
+    )
+    minio = MinioLocalAdaptor("my_bucket")
 
     logging.basicConfig(level=logging.DEBUG)
 
@@ -50,9 +52,23 @@ def test_adaptor_xaod_wsl2():
             }
         ]
     }
-    files = deliver(spec, servicex_name="servicex-uc-af", sx_adaptor=adaptor)
+    files = deliver(
+        spec,
+        servicex_name="test-backend",
+        servicex_adaptor=adaptor,  # type: ignore
+        minio_adaptor_class=MinioLocalAdaptor,
+    )
     assert files is not None, "No files returned from deliver! Internal error"
     assert False
+
+
+def test_adaptor_url():
+    codegen = MagicMock()
+    science_runner = MagicMock()
+    url = "http://localhost:5000"
+    adaptor = SXLocalAdaptor(codegen, science_runner, "mock_codegen", url)
+
+    assert adaptor.url == url
 
 
 @pytest.mark.asyncio
@@ -75,7 +91,9 @@ async def test_submit_transform():
     mock_science_runner.transform = mock_transform
 
     # Create the SXLocalAdaptor with the mock objects
-    adaptor = SXLocalAdaptor(mock_codegen, mock_science_runner, "mock_codegen")
+    adaptor = SXLocalAdaptor(
+        mock_codegen, mock_science_runner, "mock_codegen", "http://localhost:5000"
+    )
 
     # Create a TransformRequest
     transform_request = TransformRequest(
