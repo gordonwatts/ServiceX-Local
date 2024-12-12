@@ -81,20 +81,22 @@ class SXLocalAdaptor:
 
             # Store the TransformStatus indexed by a GUID
             transform_status = TransformStatus(
-                did=",".join(input_files),
-                selection=transform_request.selection,
-                request_id=request_id,
-                status=Status.complete,
-                tree_name="",
-                image="",
-                result_destination=transform_request.result_destination,
-                result_format=transform_request.result_format,
-                files_completed=len(output_files),
-                files_failed=0,
-                files_remaining=0,
-                files=len(input_files),
-                app_version="",
-                generated_code_cm="",
+                **{
+                    "did": ",".join(input_files),
+                    "selection": transform_request.selection,
+                    "request_id": request_id,
+                    "status": Status.complete,
+                    "tree-name": "mytree",
+                    "image": "doit",
+                    "result-destination": transform_request.result_destination,
+                    "result-format": transform_request.result_format,
+                    "files-completed": len(output_files),
+                    "files-failed": 0,
+                    "files-remaining": 0,
+                    "files": len(input_files),
+                    "app-version": "this",
+                    "generated-code-cm": "this",
+                }
             )
             self.transform_status_store[request_id] = transform_status
 
