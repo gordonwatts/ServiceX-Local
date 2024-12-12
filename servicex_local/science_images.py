@@ -1,8 +1,9 @@
+import logging
+import os
+import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
-import subprocess
 from typing import List
-import logging
 
 
 class BaseScienceImage(ABC):
@@ -39,6 +40,19 @@ class WSL2ScienceImage(BaseScienceImage):
         self._release = atlas_release
         self._container = wsl2_container
 
+    def _convert_to_wsl_path(self, path: Path) -> str:
+        """Convert a Windows path to a WSL path
+
+        Args:
+            path (Path): The Windows path
+
+        Returns:
+            str: The WSL path
+        """
+        return (
+            f"/mnt/{path.absolute().drive[0].lower()}{path.absolute().as_posix()[2:]}"
+        )
+
     def transform(
         self,
         generated_files_dir: Path,
@@ -57,8 +71,58 @@ class WSL2ScienceImage(BaseScienceImage):
         Returns:
             List[Path]: The paths to the output files
         """
-        # Implement the transformation logic here
-        raise NotImplementedError("This WSL2 Sci Image is not implemented yet")
+        output_paths = []
+
+        # Translate output_directory to WSL2 path
+        if not output_directory.exists():
+            output_directory.mkdir(parents=True, exist_ok=True)
+        wsl_output_directory = self._convert_to_wsl_path(output_directory)
+
+        # Translate generated files dir to WSL2 path
+        wsl_generated_files_dir = self._convert_to_wsl_path(generated_files_dir)
+
+        for input_file in input_files:
+            # Check if input_file is a root:// or http:// path
+            if input_file.startswith("root://") or input_file.startswith("http://"):
+                wsl_input_file = input_file
+                input_path_name = Path(input_file.split("/")[-1]).name
+            else:
+                # Translate input_file to WSL2 path
+                input_path = Path(input_file)
+                wsl_input_file = self._convert_to_wsl_path(input_path)
+                input_path_name = input_path.name
+
+            # Create the WSL script content
+            wsl_script_content = f"""#!/bin/bash
+tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+cd $tmp_dir
+
+# source /etc/profile.d/startup-atlas.sh
+setupATLAS
+asetup AnalysisBase,{self._release},here
+source {wsl_generated_files_dir}/transform_single_file.sh {wsl_input_file} {wsl_output_directory}/{input_path_name}  # noqa
+"""
+
+            # Write the script to a temporary file
+            script_path = generated_files_dir / "wsl_transform_script.sh"
+            with open(script_path, "wb") as script_file:
+                script_file.write(
+                    wsl_script_content.encode("utf-8").replace(b"\r\n", b"\n")
+                )
+            # Convert script_path to a WSL accessible path
+            wsl_script_path = self._convert_to_wsl_path(script_path)
+
+            # Make the script executable
+            os.chmod(script_path, 0o755)
+
+            # Call the WSL command via os.system
+            command = f"wsl -d {self._container} bash -i {wsl_script_path}"
+            r = os.system(command)
+            if r != 0:
+                raise RuntimeError(f"Failed to run command: {r} - {command}")
+            output_paths.append(output_directory / input_path_name)
+
+        return output_paths
 
 
 class DockerScienceImage(BaseScienceImage):
