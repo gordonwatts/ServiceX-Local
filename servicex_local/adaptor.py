@@ -16,11 +16,12 @@ import uuid
 class SXLocalAdaptor:
 
     def __init__(
-        self, codegen: SXCodeGen, science_runner: BaseScienceImage, codegen_name: str
+        self, codegen: SXCodeGen, science_runner: BaseScienceImage, codegen_name: str, url: str
     ):
         self.codegen = codegen
         self.science_runner = science_runner
         self.codegen_name = codegen_name
+        self.url = url
         self.transform_status_store: Dict[str, TransformStatus] = {}
 
     async def get_transforms(self) -> List[TransformStatus]:
@@ -28,9 +29,9 @@ class SXLocalAdaptor:
         # For example, read from a local file or database
         return []
 
-    def get_code_generators(self) -> List[str]:
+    def get_code_generators(self) -> Dict[str, List[str]]:
         # Return the code generator name provided during initialization
-        return [self.codegen_name]
+        return {self.codegen_name: []}
 
     async def get_datasets(
         self, did_finder: Optional[str] = None, show_deleted: bool = False
@@ -132,10 +133,6 @@ class SXLocalAdaptor:
 class MinioLocalAdaptor:
     def __init__(
         self,
-        endpoint_host: str,
-        secure: bool,
-        access_key: str,
-        secret_key: str,
         bucket: str,
     ):
         self.request_id = bucket
