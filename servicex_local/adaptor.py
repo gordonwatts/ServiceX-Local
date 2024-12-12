@@ -40,16 +40,39 @@ class SXLocalAdaptor:
         )
 
     async def submit_transform(self, transform_request: TransformRequest) -> str:
-        # Generate code using the code generator
+        """
+        Submits a transformation request and processes the transformation.
+
+        Args:
+            transform_request (TransformRequest): The transformation request containing
+                the selection, file list, result format, and result destination.
+
+        Returns:
+            str: A unique request ID for the transformation.
+
+        Raises:
+            AssertionError: If the file list in the transform_request is None.
+
+        This method performs the following steps:
+        1. Creates a temporary directory for generated files.
+        2. Generates code based on the selection in the transform request.
+        3. Creates a unique directory for the output files.
+        4. Runs the science image to perform the transformation on the input files.
+        5. Stores the transformation status indexed by a GUID.
+        6. Returns the GUID as the request ID.
+        """
         with tempfile.TemporaryDirectory() as generated_files_dir:
             generated_files_dir = Path(generated_files_dir)
             self.codegen.gen_code(transform_request.selection, generated_files_dir)
 
+            # Create a unique directory for the output files directly under the temp directory
+            request_id = str(uuid.uuid4())
+            output_directory = Path(tempfile.gettempdir()) / f"servicex/{request_id}"
+            output_directory.mkdir(parents=True, exist_ok=True)
+
             # Run the science image to perform the transformation
             input_files = transform_request.file_list
             assert input_files is not None, "Local transform needs an actual file list"
-            output_directory = generated_files_dir / "output"
-            output_directory.mkdir(parents=True, exist_ok=True)
             output_format = transform_request.result_format.name
 
             output_files = self.science_runner.transform(
@@ -57,7 +80,6 @@ class SXLocalAdaptor:
             )
 
             # Store the TransformStatus indexed by a GUID
-            request_id = str(uuid.uuid4())
             transform_status = TransformStatus(
                 did=",".join(input_files),
                 selection=transform_request.selection,
