@@ -27,7 +27,7 @@ jobs:
 
       - name: Run flake8
         run: |
-          flake8 --max-line-length 99 --exclude tests/*/* --exclude=*.json
+          flake8 --max-line-length 99 --exclude tests/genfiles_raw --exclude=*.json
 
   test:
     needs: lint
