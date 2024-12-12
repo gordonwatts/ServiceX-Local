@@ -29,14 +29,16 @@ class SXLocalAdaptor:
         self.transform_status_store: Dict[str, TransformStatus] = {}
 
     async def _get_authorization(self):
-        "Dummied out"
+        "Dummied out - we always have authorization"
         # TODO: Why is this method start with a `_`?
         pass
 
     async def get_transforms(self) -> List[TransformStatus]:
         # Implement local logic to get transforms
         # For example, read from a local file or database
-        return []
+        raise NotImplementedError(
+            "get_transforms is not implemented for SXLocalAdaptor"
+        )
 
     def get_code_generators(self) -> Dict[str, List[str]]:
         # Return the code generator name provided during initialization
