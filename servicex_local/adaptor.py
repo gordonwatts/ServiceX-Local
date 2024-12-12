@@ -1,5 +1,11 @@
 from typing import List, Optional, Dict
-from servicex.models import Status, TransformRequest, TransformStatus, CachedDataset
+from servicex.models import (
+    Status,
+    TransformRequest,
+    TransformStatus,
+    CachedDataset,
+    ResultFile,
+)
 from servicex_local.codegen import SXCodeGen
 from servicex_local.science_images import BaseScienceImage
 from pathlib import Path
@@ -37,6 +43,32 @@ class SXLocalAdaptor:
     async def delete_dataset(self, dataset_id: Optional[str] = None) -> bool:
         raise NotImplementedError(
             "delete_dataset is not implemented for SXLocalAdaptor"
+        )
+
+    def create_transform_status(
+        self,
+        transform_request: TransformRequest,
+        request_id: str,
+        output_files: List[Path],
+    ) -> TransformStatus:
+        assert transform_request.file_list is not None, "File list is required"
+        return TransformStatus(
+            **{
+                "did": ",".join(transform_request.file_list),
+                "selection": transform_request.selection,
+                "request_id": request_id,
+                "status": Status.complete,
+                "tree-name": "mytree",
+                "image": "doit",
+                "result-destination": transform_request.result_destination,
+                "result-format": transform_request.result_format,
+                "files-completed": len(output_files),
+                "files-failed": 0,
+                "files-remaining": 0,
+                "files": len(transform_request.file_list),
+                "app-version": "this",
+                "generated-code-cm": "this",
+            }
         )
 
     async def submit_transform(self, transform_request: TransformRequest) -> str:
@@ -80,23 +112,8 @@ class SXLocalAdaptor:
             )
 
             # Store the TransformStatus indexed by a GUID
-            transform_status = TransformStatus(
-                **{
-                    "did": ",".join(input_files),
-                    "selection": transform_request.selection,
-                    "request_id": request_id,
-                    "status": Status.complete,
-                    "tree-name": "mytree",
-                    "image": "doit",
-                    "result-destination": transform_request.result_destination,
-                    "result-format": transform_request.result_format,
-                    "files-completed": len(output_files),
-                    "files-failed": 0,
-                    "files-remaining": 0,
-                    "files": len(input_files),
-                    "app-version": "this",
-                    "generated-code-cm": "this",
-                }
+            transform_status = self.create_transform_status(
+                transform_request, request_id, output_files
             )
             self.transform_status_store[request_id] = transform_status
 
@@ -110,3 +127,71 @@ class SXLocalAdaptor:
             raise ValueError(f"No transform found for request ID {request_id}")
 
         return transform_status
+
+
+class MinioLocalAdaptor:
+    def __init__(
+        self,
+        endpoint_host: str,
+        secure: bool,
+        access_key: str,
+        secret_key: str,
+        bucket: str,
+    ):
+        self.request_id = bucket
+
+    @classmethod
+    def for_transform(cls, transform: TransformStatus):
+        return cls(
+            endpoint_host=transform.minio_endpoint,  # type: ignore
+            secure=transform.minio_secured,  # type: ignore
+            access_key=transform.minio_access_key,  # type: ignore
+            secret_key=transform.minio_secret_key,  # type: ignore
+            bucket=transform.request_id,
+        )
+
+    async def list_bucket(self) -> List[ResultFile]:
+        output_directory = Path(tempfile.gettempdir()) / f"servicex/{self.request_id}"
+        result_files = []
+        for file_path in output_directory.glob("*"):
+            if file_path.is_file():
+                result_files.append(
+                    ResultFile(
+                        filename=file_path.name,
+                        size=file_path.stat().st_size,
+                        extension=file_path.suffix[1:],  # Remove the leading dot
+                    )
+                )
+        return result_files
+
+    async def download_file(
+        self, object_name: str, local_dir: str, shorten_filename: bool = False
+    ) -> Path:
+        output_directory = Path(tempfile.gettempdir()) / f"servicex/{self.request_id}"
+        source_path = output_directory / object_name
+        destination_path = Path(local_dir) / object_name
+
+        if not source_path.exists():
+            raise FileNotFoundError(
+                f"File {object_name} not found in {output_directory}"
+            )
+
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
+        destination_path.write_bytes(source_path.read_bytes())
+
+        return destination_path.resolve()
+
+    async def get_signed_url(self, object_name: str) -> str:
+        output_directory = Path(tempfile.gettempdir()) / f"servicex/{self.request_id}"
+        file_path = output_directory / object_name
+
+        if not file_path.exists():
+            raise FileNotFoundError(
+                f"File {object_name} not found in {output_directory}"
+            )
+
+        return file_path.resolve().as_uri()
+
+    @classmethod
+    def hash_path(cls, file_name):
+        raise NotImplementedError("hash_path is not implemented for MockMinioAdapter")
