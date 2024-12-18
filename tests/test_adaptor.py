@@ -12,7 +12,6 @@ from servicex.models import (
     Status,
     TransformRequest,
     TransformStatus,
-    ResultFile,
 )
 
 from servicex_local import LocalXAODCodegen, SXLocalAdaptor, WSL2ScienceImage
@@ -25,7 +24,6 @@ def test_adaptor_xaod_wsl2():
     adaptor = SXLocalAdaptor(
         codegen, science_runner, "atlasr22", "http://localhost:5001"
     )
-    minio = MinioLocalAdaptor("my_bucket")
 
     logging.basicConfig(level=logging.DEBUG)
 
@@ -60,6 +58,10 @@ def test_adaptor_xaod_wsl2():
         minio_adaptor_class=MinioLocalAdaptor,
     )
     assert files is not None, "No files returned from deliver! Internal error"
+    assert False
+
+
+def test_adaptor_xaod_docker():
     assert False
 
 
@@ -158,74 +160,57 @@ def create_transform_status(request_id: str) -> TransformStatus:
 
 @pytest.mark.asyncio
 async def test_list_bucket():
-    # Create a temporary directory to simulate the Minio bucket
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_dir_path = Path(temp_dir)
 
-        # Create a MinioLocalAdaptor instance
-        transform_status = create_transform_status("test_request_id")
-        adaptor = MinioLocalAdaptor.for_transform(transform_status)
+    # Create a MinioLocalAdaptor instance
+    transform_status = create_transform_status("test_request_id")
+    adaptor = MinioLocalAdaptor.for_transform(transform_status)
 
-        # Mock the output directory to point to the temporary directory
-        adaptor.request_id = "test_request_id"
-        output_directory = (
-            Path(tempfile.gettempdir()) / f"servicex/{adaptor.request_id}"
-        )
-        output_directory.mkdir(parents=True, exist_ok=True)
-        (output_directory / "file1.txt").write_text("content1")
-        (output_directory / "file2.txt").write_text("content2")
+    # Mock the output directory to point to the temporary directory
+    adaptor.request_id = "test_request_id"
+    output_directory = Path(tempfile.gettempdir()) / f"servicex/{adaptor.request_id}"
+    output_directory.mkdir(parents=True, exist_ok=True)
+    (output_directory / "file1.txt").write_text("content1")
+    (output_directory / "file2.txt").write_text("content2")
 
-        # Call list_bucket and verify the result
-        result_files = await adaptor.list_bucket()
-        assert len(result_files) == 2
-        assert result_files[0].filename == "file1.txt"
-        assert result_files[1].filename == "file2.txt"
+    # Call list_bucket and verify the result
+    result_files = await adaptor.list_bucket()
+    assert len(result_files) == 2
+    assert result_files[0].filename == "file1.txt"
+    assert result_files[1].filename == "file2.txt"
 
 
 @pytest.mark.asyncio
 async def test_download_file():
-    # Create a temporary directory to simulate the Minio bucket
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_dir_path = Path(temp_dir)
+    # Create a MinioLocalAdaptor instance
+    transform_status = create_transform_status("test_request_id")
+    adaptor = MinioLocalAdaptor.for_transform(transform_status)
 
-        # Create a MinioLocalAdaptor instance
-        transform_status = create_transform_status("test_request_id")
-        adaptor = MinioLocalAdaptor.for_transform(transform_status)
+    # Mock the output directory to point to the temporary directory
+    adaptor.request_id = "test_request_id"
+    output_directory = Path(tempfile.gettempdir()) / f"servicex/{adaptor.request_id}"
+    output_directory.mkdir(parents=True, exist_ok=True)
+    (output_directory / "file1.txt").write_text("content1")
 
-        # Mock the output directory to point to the temporary directory
-        adaptor.request_id = "test_request_id"
-        output_directory = (
-            Path(tempfile.gettempdir()) / f"servicex/{adaptor.request_id}"
-        )
-        output_directory.mkdir(parents=True, exist_ok=True)
-        (output_directory / "file1.txt").write_text("content1")
-
-        # Call download_file and verify the result
-        local_dir = Path(tempfile.gettempdir()) / "local_dir"
-        downloaded_file = await adaptor.download_file("file1.txt", str(local_dir))
-        assert downloaded_file.exists()
-        assert downloaded_file.read_text() == "content1"
+    # Call download_file and verify the result
+    local_dir = Path(tempfile.gettempdir()) / "local_dir"
+    downloaded_file = await adaptor.download_file("file1.txt", str(local_dir))
+    assert downloaded_file.exists()
+    assert downloaded_file.read_text() == "content1"
 
 
 @pytest.mark.asyncio
 async def test_get_signed_url():
-    # Create a temporary directory to simulate the Minio bucket
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_dir_path = Path(temp_dir)
+    # Create a MinioLocalAdaptor instance
+    transform_status = create_transform_status("test_request_id")
+    adaptor = MinioLocalAdaptor.for_transform(transform_status)
 
-        # Create a MinioLocalAdaptor instance
-        transform_status = create_transform_status("test_request_id")
-        adaptor = MinioLocalAdaptor.for_transform(transform_status)
+    # Mock the output directory to point to the temporary directory
+    adaptor.request_id = "test_request_id"
+    output_directory = Path(tempfile.gettempdir()) / f"servicex/{adaptor.request_id}"
+    output_directory.mkdir(parents=True, exist_ok=True)
+    (output_directory / "file1.txt").write_text("content1")
 
-        # Mock the output directory to point to the temporary directory
-        adaptor.request_id = "test_request_id"
-        output_directory = (
-            Path(tempfile.gettempdir()) / f"servicex/{adaptor.request_id}"
-        )
-        output_directory.mkdir(parents=True, exist_ok=True)
-        (output_directory / "file1.txt").write_text("content1")
-
-        # Call get_signed_url and verify the result
-        signed_url = await adaptor.get_signed_url("file1.txt")
-        assert signed_url.startswith("file://")
-        assert signed_url.endswith("file1.txt")
+    # Call get_signed_url and verify the result
+    signed_url = await adaptor.get_signed_url("file1.txt")
+    assert signed_url.startswith("file://")
+    assert signed_url.endswith("file1.txt")

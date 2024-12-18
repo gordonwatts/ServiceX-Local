@@ -142,10 +142,7 @@ class SXLocalAdaptor:
 
 
 class MinioLocalAdaptor:
-    def __init__(
-        self,
-        bucket: str,
-    ):
+    def __init__(self, bucket: str, **kwargs):
         self.request_id = bucket
 
     @classmethod
