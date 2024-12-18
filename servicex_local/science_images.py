@@ -105,10 +105,8 @@ source {wsl_generated_files_dir}/transform_single_file.sh {wsl_input_file} {wsl_
 
             # Write the script to a temporary file
             script_path = generated_files_dir / "wsl_transform_script.sh"
-            with open(script_path, "wb") as script_file:
-                script_file.write(
-                    wsl_script_content.encode("utf-8").replace(b"\r\n", b"\n")
-                )
+            with open(script_path, "w", newline="\n") as script_file:
+                script_file.write(wsl_script_content)
             # Convert script_path to a WSL accessible path
             wsl_script_path = self._convert_to_wsl_path(script_path)
 
