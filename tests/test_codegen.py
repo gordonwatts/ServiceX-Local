@@ -40,6 +40,7 @@ def test_local_func_xAOD(tmp_path):
     r = codegen.gen_code(query, tmp_path)
     all_files = list(Path(r).iterdir())
     assert len(all_files) == 6, f"Expected 1 file, found {len(all_files)}"
+    assert "runner.sh" in [a.name for a in all_files], "Expected runner.sh in directory"
 
 
 def test_local_has_right_line_endings(tmp_path):
