@@ -19,6 +19,11 @@ from servicex_local.adaptor import MinioLocalAdaptor
 
 
 def test_adaptor_xaod_wsl2():
+    "Run a test with the WSL2 acting as the science image"
+
+    # Dummy out the cache manager so no results are cached.
+
+    # Here starts the test code
     codegen = LocalXAODCodegen()
     science_runner = WSL2ScienceImage("atlas_al9", "25.2.12")
     adaptor = SXLocalAdaptor(
@@ -58,10 +63,21 @@ def test_adaptor_xaod_wsl2():
         minio_adaptor_class=MinioLocalAdaptor,
     )
     assert files is not None, "No files returned from deliver! Internal error"
-    assert False
+
+    # Now make sure the file exists!
+    assert len(files) == 1
+    local_files = list(files.values())[0]
+    assert len(local_files) == 1
+    assert Path(local_files[0]).exists()
 
 
 def test_adaptor_xaod_docker():
+    "Use docker as back end to make sure our scripts are portable!"
+    assert False
+
+
+def test_adaptor_run_twice():
+    "Make sure we can run twice, the second time should get from cache with no errors"
     assert False
 
 
