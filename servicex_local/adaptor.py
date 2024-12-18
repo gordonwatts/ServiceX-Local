@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional, Dict
 from servicex.models import (
     Status,
@@ -80,6 +81,7 @@ class SXLocalAdaptor:
                 "files": len(transform_request.file_list),
                 "app-version": "this",
                 "generated-code-cm": "this",
+                "submit-time": datetime.now(),
             }
         )
 
