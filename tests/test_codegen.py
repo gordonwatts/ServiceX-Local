@@ -40,3 +40,25 @@ def test_local_func_xAOD(tmp_path):
     r = codegen.gen_code(query, tmp_path)
     all_files = list(Path(r).iterdir())
     assert len(all_files) == 6, f"Expected 1 file, found {len(all_files)}"
+
+
+def test_local_has_right_line_endings(tmp_path):
+    "Make sure all .sh files generated have Linux line-endings"
+
+    query = (
+        "(call Select (call Select (call EventDataset) (lambda (list e) "
+        "(call (attr e 'Jets') 'AnalysisJets'))) (lambda (list jets) (dict "
+        " (list 'pt' 'eta') (list (call (attr jets 'Select') (lambda (list j) "
+        "(call (attr j 'pt')))) (call (attr jets 'Select') (lambda "
+        "(list j) (call (attr j 'eta'))))))))"
+    )
+
+    codegen = LocalXAODCodegen()
+    r = codegen.gen_code(query, tmp_path)
+    all_files = list(Path(r).glob("*.sh"))
+    for f in all_files:
+        with open(f, "rb") as file:
+            content = file.read()
+            assert b"\r\n" not in content, f"File {f} has Windows line endings"
+            assert b"\r" not in content, f"File {f} has Mac line endings"
+            assert b"\n" in content, f"File {f} has no line endings"

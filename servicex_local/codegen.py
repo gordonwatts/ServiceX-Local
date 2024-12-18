@@ -71,6 +71,9 @@ class LocalXAODCodegen(SXCodeGen):
         template_file = Path(__file__).parent / "templates" / "transform_single_file.sh"
         shutil.copy(template_file, directory)
 
+        # Ensure all .sh files have Linux line endings
+        rewrite_sh_files(directory)
+
         return directory
 
 
@@ -147,5 +150,21 @@ class DockerCodegen(SXCodeGen):
             directory.mkdir(parents=True)
         zipfile.extractall(directory)
 
+        # Ensure all .sh files have Linux line endings
+        rewrite_sh_files(directory)
+
         # The request should come back as a zip file. We now unpack that.
         return directory
+
+
+def rewrite_sh_files(directory: Path):
+    """Rewrite all .sh files in the given directory to ensure they have Linux line endings.
+
+    Args:
+        directory (Path): The directory to search for .sh files.
+    """
+    for sh_file in directory.rglob("*.sh"):
+        with open(sh_file, "r") as file:
+            content = file.readlines()
+        with open(sh_file, "w", newline="\n") as file:
+            file.writelines(content)
