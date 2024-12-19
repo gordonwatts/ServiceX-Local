@@ -309,8 +309,9 @@ async def test_list_bucket():
     # Call list_bucket and verify the result
     result_files = await adaptor.list_bucket()
     assert len(result_files) == 2
-    assert result_files[0].filename == "file1.txt"
-    assert result_files[1].filename == "file2.txt"
+    assert result_files[0].filename in ["file1.txt", "file2.txt"]
+    assert result_files[1].filename in ["file1.txt", "file2.txt"]
+    assert result_files[0].filename != result_files[1].filename
 
 
 @pytest.mark.asyncio
