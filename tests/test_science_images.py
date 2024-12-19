@@ -7,7 +7,9 @@ import pytest
 from servicex_local.science_images import DockerScienceImage, WSL2ScienceImage
 
 
-@pytest.mark.skip(reason="This test needs docker to be installed")
+@pytest.mark.skip(
+    reason="This test needs docker to be installed and grid cert is needed"
+)
 def test_docker_science(tmp_path):
     "Run a simple test of the docker science image"
 
