@@ -14,7 +14,12 @@ from servicex.models import (
     TransformStatus,
 )
 
-from servicex_local import LocalXAODCodegen, SXLocalAdaptor, WSL2ScienceImage
+from servicex_local import (
+    LocalXAODCodegen,
+    SXLocalAdaptor,
+    WSL2ScienceImage,
+    DockerScienceImage,
+)
 from servicex_local.adaptor import MinioLocalAdaptor
 
 
@@ -72,9 +77,57 @@ def test_adaptor_xaod_wsl2():
     assert Path(local_files[0]).exists()
 
 
+@pytest.mark.skip(reason="This test needs docker to be installed")
 def test_adaptor_xaod_docker():
     "Use docker as back end to make sure our scripts are portable!"
-    assert False
+    # Here starts the test code
+    codegen = LocalXAODCodegen()
+    science_runner = DockerScienceImage(
+        "gitlab-registry.cern.ch/atlas/athena/analysisbase:25.2.12"
+    )
+    adaptor = SXLocalAdaptor(
+        codegen, science_runner, "atlasr22", "http://localhost:5001"
+    )
+
+    logging.basicConfig(level=logging.DEBUG)
+
+    # The simple query, take straight from the example in the documentation.
+    query = q.FuncADL_ATLASr22()  # type: ignore
+    jets_per_event = query.Select(lambda e: e.Jets("AnalysisJets"))
+    jet_info_per_event = jets_per_event.Select(
+        lambda jets: {
+            "pt": jets.Select(lambda j: j.pt()),
+            "eta": jets.Select(lambda j: j.eta()),
+        }
+    )
+
+    spec = {
+        "Sample": [
+            {
+                "Name": "func_adl_xAOD_simple",
+                "Dataset": dataset.FileList(
+                    [
+                        "root://eospublic.cern.ch//eos/opendata/atlas/rucio/mc20_13TeV/"
+                        "DAOD_PHYSLITE.37622528._000013.pool.root.1"
+                    ]
+                ),
+                "Query": jet_info_per_event,
+            }
+        ]
+    }
+    files = deliver(
+        spec,
+        servicex_name="test-backend",
+        servicex_adaptor=adaptor,  # type: ignore
+        minio_adaptor_class=MinioLocalAdaptor,
+    )
+    assert files is not None, "No files returned from deliver! Internal error"
+
+    # Now make sure the file exists!
+    assert len(files) == 1
+    local_files = list(files.values())[0]
+    assert len(local_files) == 1
+    assert Path(local_files[0]).exists()
 
 
 def test_adaptor_run_twice():
