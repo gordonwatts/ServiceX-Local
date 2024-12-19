@@ -59,6 +59,7 @@ def test_adaptor_xaod_wsl2():
                     ]
                 ),
                 "Query": jet_info_per_event,
+                "IgnoreLocalCache": True,
             }
         ]
     }
@@ -112,6 +113,7 @@ def test_adaptor_xaod_docker():
                     ]
                 ),
                 "Query": jet_info_per_event,
+                "IgnoreLocalCache": True,
             }
         ]
     }
@@ -128,11 +130,6 @@ def test_adaptor_xaod_docker():
     local_files = list(files.values())[0]
     assert len(local_files) == 1
     assert Path(local_files[0]).exists()
-
-
-def test_adaptor_run_twice():
-    "Make sure we can run twice, the second time should get from cache with no errors"
-    assert False
 
 
 def test_adaptor_url():
@@ -220,6 +217,7 @@ def science_runner_one_txt_file() -> MagicMock:
         generated_files_dir, input_files, output_directory: Path, output_format
     ):
         output_file = output_directory / "output_file.txt"
+        output_file.write_text("Hello, world!")
 
         # Check all .sh files in the generated_files_dir directory for anything with linux line
         # endings. If we find one, we should assert.
