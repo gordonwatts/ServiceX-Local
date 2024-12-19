@@ -14,6 +14,19 @@ import tempfile
 import uuid
 
 
+def _rewrite_sh_files(directory: Path):
+    """Rewrite all .sh files in the given directory to ensure they have Linux line endings.
+
+    Args:
+        directory (Path): The directory to search for .sh files.
+    """
+    for sh_file in directory.rglob("*.sh"):
+        with open(sh_file, "r") as file:
+            content = file.readlines()
+        with open(sh_file, "w", newline="\n") as file:
+            file.writelines(content)
+
+
 class SXLocalAdaptor:
 
     def __init__(
@@ -110,6 +123,9 @@ class SXLocalAdaptor:
         with tempfile.TemporaryDirectory() as generated_files_dir:
             generated_files_dir = Path(generated_files_dir)
             self.codegen.gen_code(transform_request.selection, generated_files_dir)
+
+            # Make sure all files have proper line endings
+            _rewrite_sh_files(generated_files_dir)
 
             # Create a unique directory for the output files directly under the temp directory
             request_id = str(uuid.uuid4())

@@ -18,6 +18,7 @@ from servicex_local import LocalXAODCodegen, SXLocalAdaptor, WSL2ScienceImage
 from servicex_local.adaptor import MinioLocalAdaptor
 
 
+@pytest.mark.skip(reason="This test needs wsl2 to be installed")
 def test_adaptor_xaod_wsl2():
     "Run a test with the WSL2 acting as the science image"
 
@@ -91,27 +92,19 @@ def test_adaptor_url():
 
 
 @pytest.mark.asyncio
-async def test_submit_transform():
+async def test_submit_transform_one_file(science_runner_one_txt_file: MagicMock):
     # Create mock objects for code generator and science image
     mock_codegen = MagicMock()
-    mock_science_runner = MagicMock()
 
     # Configure the mock code generator to do nothing
     mock_codegen.gen_code = MagicMock()
 
-    # Configure the mock science image to write one file to the output directory
-    def mock_transform(
-        generated_files_dir, input_files, output_directory, output_format
-    ):
-        output_file = output_directory / "output_file.txt"
-        output_file.write_text("dummy content")
-        return [output_file]
-
-    mock_science_runner.transform = mock_transform
-
     # Create the SXLocalAdaptor with the mock objects
     adaptor = SXLocalAdaptor(
-        mock_codegen, mock_science_runner, "mock_codegen", "http://localhost:5000"
+        mock_codegen,
+        science_runner_one_txt_file,
+        "mock_codegen",
+        "http://localhost:5000",
     )
 
     # Create a TransformRequest
@@ -148,6 +141,80 @@ async def test_submit_transform():
     output_files = list(output_directory.glob("*"))
     assert len(output_files) == 1
     assert output_files[0].name == "output_file.txt"
+
+
+@pytest.fixture()
+def code_gen_one_windows_file() -> MagicMock:
+    "return a code generator mock that will write a Windows line ending file"
+
+    def generate_files(query: str, directory: Path):
+        bad_file = directory / "bad_file.sh"
+        with bad_file.open("wb") as h_bad_file:
+            h_bad_file.write(b"echo 'Hello, world!'\r\necho 'no'\r\n")
+        return bad_file
+
+    code_generator = MagicMock()
+    code_generator.gen_code = generate_files
+
+    return code_generator
+
+
+@pytest.fixture()
+def science_runner_one_txt_file() -> MagicMock:
+    mock_science_runner = MagicMock()
+
+    def mock_transform(
+        generated_files_dir, input_files, output_directory: Path, output_format
+    ):
+        output_file = output_directory / "output_file.txt"
+
+        # Check all .sh files in the generated_files_dir directory for anything with linux line
+        # endings. If we find one, we should assert.
+        for file in generated_files_dir.glob("*.sh"):
+            with file.open("rb") as f:
+                text = f.read().decode("utf-8")
+                assert (
+                    "\r\n" not in text
+                ), "No Windows line endings allowed in a sh file"
+
+        return [output_file]
+
+    mock_science_runner.transform = mock_transform
+    return mock_science_runner
+
+
+@pytest.mark.asyncio
+async def test_submit_transform_line_endings(
+    code_gen_one_windows_file, science_runner_one_txt_file
+):
+    """Write a source .sh file that has Windows line endings and check in the
+    science container that it is Linux line endings"""
+
+    # Create the SXLocalAdaptor with the mock objects
+    adaptor = SXLocalAdaptor(
+        code_gen_one_windows_file,
+        science_runner_one_txt_file,
+        "mock_codegen",
+        "http://localhost:5000",
+    )
+
+    # Create a TransformRequest
+    transform_request = TransformRequest(
+        **{
+            "selection": "dummy_selection",
+            "file-list": ["input_file.root"],
+            "result_format": ResultFormat.root_ttree,
+            "result_destination": ResultDestination.volume,
+            "codegen": "dummy",
+        }
+    )
+
+    # Call submit_transform and get the request ID
+    request_id = await adaptor.submit_transform(transform_request)
+
+    # Verify the transform status is stored correctly
+    transform_status = await adaptor.get_transform_status(request_id)
+    assert transform_status.files == 1
 
 
 def create_transform_status(request_id: str) -> TransformStatus:
