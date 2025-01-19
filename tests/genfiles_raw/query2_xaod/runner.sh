@@ -44,7 +44,11 @@ if [ $# != 0 ]; then
 fi
 
 # Setup and config
-source /home/atlas/release_setup.sh
+if [ -f /home/atlas/release_setup.sh ]; then
+   source /home/atlas/release_setup.sh
+else
+   echo "/home/atlas/release_setup.sh not found. Skipping."
+fi
 
 # Remember where we are and the script location.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
