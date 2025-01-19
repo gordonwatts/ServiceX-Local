@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Physics",
@@ -45,6 +46,7 @@ test = [
     "pytest-console-scripts>=1.4.1",
     "pytest-asyncio>=0.21.0",
     "flake8>=5.0.4",
+    "func_adl_xAOD",
     "black",
 ]
 docs = [
@@ -67,14 +69,12 @@ voms_proxy_init = "servicex_local.create_x509:main"
 # pyproject.toml, .gitignore, any README, any LICENSE, AUTHORS
 include = [
     "/servicex_local/",
-    "/servicex_local/templates/transform_single_file.sh"
+    "/servicex_local/templates/transform_single_file.sh",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["servicex_local"]
-include = [
-    "/servicex_local/templates/transform_single_file.sh"
-]
+include = ["/servicex_local/templates/transform_single_file.sh"]
 
 [tool.coverage.run]
 dynamic_context = "test_function"
