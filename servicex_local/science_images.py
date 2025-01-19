@@ -38,9 +38,10 @@ def run_command_with_logging(command: List[str]) -> None:
 
     if return_code != 0:
         raise RuntimeError(
-            f"Command failed with return code {return_code}\n"
-            f"stdout:\n{'\n'.join(stdout_lines)}\n"
-            f"stderr:\n{'\n'.join(stderr_lines)}"
+            "Command failed with return code {return_code}" "\n"
+            f"command: {' '.join(command)}" "\n"
+            "stdout:" "\n" f"{'\n'.join(stdout_lines)}""\n"
+            "stderr:" "\n" f"{'\n'.join(stderr_lines)}"
         )
 
 
