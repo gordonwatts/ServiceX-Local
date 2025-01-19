@@ -64,3 +64,27 @@ def test_wsl2_science(tmp_path, caplog):
     outputs[0].exists()
     assert len(caplog.records) == 0
     assert caplog.text == ""
+
+
+# @pytest.mark.skip(reason="This test needs wsl2 to be installed")
+def test_wsl2_science_logging(tmp_path, caplog):
+    """Test a xAOD transform on a WSL2 atlas distribution
+    This test takes about 100 seconds to run on a connection
+    that is reasonable (at home). Takes 300 to 400 seconds if
+    cvmfs is cold.
+    """
+    with caplog.at_level(logging.DEBUG):
+        wsl2 = WSL2ScienceImage("atlas_al9", "25.2.12")
+        outputs = wsl2.transform(
+            Path("tests/genfiles_raw/query2_xaod"),
+            [
+                "root://eospublic.cern.ch//eos/opendata/atlas/rucio/mc20_13TeV/"
+                "DAOD_PHYSLITE.37622528._000013.pool.root.1"
+            ],
+            tmp_path / "output",
+            "root-file",
+        )
+
+    assert len(outputs) == 1
+    outputs[0].exists()
+    assert "release_setup.sh" in caplog.text

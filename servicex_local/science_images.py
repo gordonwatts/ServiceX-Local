@@ -6,6 +6,30 @@ from pathlib import Path
 from typing import List
 
 
+def run_command_with_logging(command: List[str]) -> int:
+    """Run a command in a subprocess and log the output.
+
+    Args:
+        command (List[str]): The command to run
+
+    Returns:
+        int: The command's status when it finishes running
+    """
+    logger = logging.getLogger(__name__)
+    process = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
+
+    for stdout_line in iter(process.stdout.readline, ""):
+        logger.debug(stdout_line.strip())
+    for stderr_line in iter(process.stderr.readline, ""):
+        logger.debug(stderr_line.strip())
+
+    process.stdout.close()
+    process.stderr.close()
+    return process.wait()
+
+
 class BaseScienceImage(ABC):
     @abstractmethod
     def transform(
@@ -114,10 +138,10 @@ source {wsl_generated_files_dir}/transform_single_file.sh {wsl_input_file} {wsl_
             os.chmod(script_path, 0o755)
 
             # Call the WSL command via os.system
-            command = f"wsl -d {self._container} bash -i {wsl_script_path}"
-            r = os.system(command)
+            command = ["wsl", "-d", self._container, "bash", "-i", wsl_script_path]
+            r = run_command_with_logging(command)
             if r != 0:
-                raise RuntimeError(f"Failed to run command: {r} - {command}")
+                raise RuntimeError(f"Failed to run command: {r} - {' '.join(command)}")
             output_paths.append(output_directory / input_path_name)
 
         return output_paths
@@ -173,28 +197,25 @@ class DockerScienceImage(BaseScienceImage):
             output_name = Path(input_file).name
 
             try:
-                subprocess.run(
-                    [
-                        "docker",
-                        "run",
-                        "--name",
-                        container_name,
-                        "--rm",
-                        "-v",
-                        f"{generated_files_dir.absolute()}:/generated",
-                        "-v",
-                        f"{output_directory}:/servicex/output",
-                        *x509up_volume,
-                        self.image_name,
-                        "bash",
-                        "/generated/transform_single_file.sh",
-                        input_file,
-                        f"/servicex/output/{output_name}",
-                        output_format,
-                    ],
-                    check=True,
-                    stderr=subprocess.PIPE,
-                )
+                command = [
+                    "docker",
+                    "run",
+                    "--name",
+                    container_name,
+                    "--rm",
+                    "-v",
+                    f"{generated_files_dir.absolute()}:/generated",
+                    "-v",
+                    f"{output_directory}:/servicex/output",
+                    *x509up_volume,
+                    self.image_name,
+                    "bash",
+                    "/generated/transform_single_file.sh",
+                    input_file,
+                    f"/servicex/output/{output_name}",
+                    output_format,
+                ]
+                run_command_with_logging(command)
                 output_paths.append(output_directory / Path(input_file).name)
 
             except subprocess.CalledProcessError as e:
