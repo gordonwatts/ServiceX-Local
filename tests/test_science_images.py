@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -7,11 +8,10 @@ import pytest
 from servicex_local.science_images import DockerScienceImage, WSL2ScienceImage
 
 
-@pytest.mark.skip(
-    reason="This test needs docker to be installed and grid cert is needed"
-)
-def test_docker_science(tmp_path):
-    "Run a simple test of the docker science image"
+def test_docker_science(tmp_path, request):
+    "Test against a docker science image - integrated (uses docker)"
+    if not request.config.getoption("--docker"):
+        pytest.skip("Use the --wsl2 pytest flag to run this test")
 
     # We need the files we'll use as input.
     generated_file_directory = tmp_path / "input"
@@ -40,24 +40,80 @@ def test_docker_science(tmp_path):
     assert output_files[0].exists()
 
 
-@pytest.mark.skip(reason="This test needs wsl2 to be installed")
-def test_wsl2_science(tmp_path):
+def test_wsl2_science(tmp_path, caplog, request):
     """Test a xAOD transform on a WSL2 atlas distribution
     This test takes about 100 seconds to run on a connection
     that is reasonable (at home). Takes 300 to 400 seconds if
     cvmfs is cold.
     """
+    if not request.config.getoption("--wsl2"):
+        pytest.skip("Use the --wsl2 pytest flag to run this test")
 
-    wsl2 = WSL2ScienceImage("atlas_al9", "25.2.12")
-    outputs = wsl2.transform(
-        Path("tests/genfiles_raw/query2_xaod"),
-        [
-            "root://eospublic.cern.ch//eos/opendata/atlas/rucio/mc20_13TeV/"
-            "DAOD_PHYSLITE.37622528._000013.pool.root.1"
-        ],
-        tmp_path / "output",
-        "root-file",
-    )
+    with caplog.at_level(logging.WARNING):
+        wsl2 = WSL2ScienceImage("atlas_al9", "25.2.12")
+        outputs = wsl2.transform(
+            Path("tests/genfiles_raw/query2_xaod"),
+            [
+                "root://eospublic.cern.ch//eos/opendata/atlas/rucio/mc20_13TeV/"
+                "DAOD_PHYSLITE.37622528._000013.pool.root.1"
+            ],
+            tmp_path / "output",
+            "root-file",
+        )
 
     assert len(outputs) == 1
     outputs[0].exists()
+    assert len(caplog.records) == 0
+    assert caplog.text == ""
+
+
+def test_wsl2_science_logging(tmp_path, caplog, request):
+    """Test a xAOD transform on a WSL2 atlas distribution
+    This test takes about 100 seconds to run on a connection
+    that is reasonable (at home). Takes 300 to 400 seconds if
+    cvmfs is cold.
+    """
+    if not request.config.getoption("--wsl2"):
+        pytest.skip("Use the --wsl2 pytest flag to run this test")
+    with caplog.at_level(logging.DEBUG):
+        wsl2 = WSL2ScienceImage("atlas_al9", "25.2.12")
+        outputs = wsl2.transform(
+            Path("tests/genfiles_raw/query2_xaod"),
+            [
+                "root://eospublic.cern.ch//eos/opendata/atlas/rucio/mc20_13TeV/"
+                "DAOD_PHYSLITE.37622528._000013.pool.root.1"
+            ],
+            tmp_path / "output",
+            "root-file",
+        )
+
+    assert len(outputs) == 1
+    outputs[0].exists()
+    assert "release_setup.sh" in caplog.text
+
+
+def test_wsl2_science_error(tmp_path, request):
+    """Test a xAOD transform on a WSL2 atlas distribution
+    This test takes about 100 seconds to run on a connection
+    that is reasonable (at home). Takes 300 to 400 seconds if
+    cvmfs is cold.
+    """
+    if not request.config.getoption("--wsl2"):
+        pytest.skip("Use the --wsl2 pytest flag to run this test")
+    wsl2 = WSL2ScienceImage("atlas_al9", "25.2.12")
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "failed to open file root://fork.me.now//eos/opendata/atlas/rucio/mc20_13TeV"
+            "/DAOD_PHYSLITE.37622528._000013.pool.root.1\nDirectInputModule"
+        ),
+    ):
+        wsl2.transform(
+            Path("tests/genfiles_raw/query2_xaod"),
+            [
+                "root://fork.me.now//eos/opendata/atlas/rucio/mc20_13TeV/"
+                "DAOD_PHYSLITE.37622528._000013.pool.root.1"
+            ],
+            tmp_path / "output",
+            "root-file",
+        )

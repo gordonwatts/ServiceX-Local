@@ -6,6 +6,58 @@ from pathlib import Path
 from typing import List
 
 
+def run_command_with_logging(command: List[str]) -> None:
+    """Run a command in a subprocess and log the output.
+
+    Args:
+        command (List[str]): The command to run
+
+    Raises:
+        RuntimeError: If the command fails
+    """
+    logger = logging.getLogger(__name__)
+    process = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
+
+    stdout_lines = []
+    stderr_lines = []
+
+    assert process.stdout is not None
+    assert process.stderr is not None
+
+    for stdout_line in iter(process.stdout.readline, ""):
+        stripped_line = stdout_line.strip()
+        logger.debug(stripped_line)
+        stdout_lines.append(stripped_line)
+    for stderr_line in iter(process.stderr.readline, ""):
+        stripped_line = stderr_line.strip()
+        logger.debug(stripped_line)
+        stderr_lines.append(stripped_line)
+
+    process.stdout.close()
+    process.stderr.close()
+    return_code = process.wait()
+
+    if return_code != 0:
+        # TODO: Once we are done with 3.11, get rid of newline. Problem is
+        #       we can't have a \n in an f-string for the older versions of python.
+        newline = "\n"
+        raise RuntimeError(
+            f"Command failed with return code {return_code}"
+            + newline
+            + f"command: {' '.join(command)}"
+            + newline
+            + "stdout:"
+            + newline
+            + f"{'-'.join(stdout_lines)}"
+            + newline
+            + "stderr:"
+            + newline
+            + f"{'-'.join(stderr_lines)}"
+        )
+
+
 class BaseScienceImage(ABC):
     @abstractmethod
     def transform(
@@ -114,10 +166,8 @@ source {wsl_generated_files_dir}/transform_single_file.sh {wsl_input_file} {wsl_
             os.chmod(script_path, 0o755)
 
             # Call the WSL command via os.system
-            command = f"wsl -d {self._container} bash -i {wsl_script_path}"
-            r = os.system(command)
-            if r != 0:
-                raise RuntimeError(f"Failed to run command: {r} - {command}")
+            command = ["wsl", "-d", self._container, "bash", "-i", wsl_script_path]
+            run_command_with_logging(command)
             output_paths.append(output_directory / input_path_name)
 
         return output_paths
@@ -173,28 +223,25 @@ class DockerScienceImage(BaseScienceImage):
             output_name = Path(input_file).name
 
             try:
-                subprocess.run(
-                    [
-                        "docker",
-                        "run",
-                        "--name",
-                        container_name,
-                        "--rm",
-                        "-v",
-                        f"{generated_files_dir.absolute()}:/generated",
-                        "-v",
-                        f"{output_directory}:/servicex/output",
-                        *x509up_volume,
-                        self.image_name,
-                        "bash",
-                        "/generated/transform_single_file.sh",
-                        input_file,
-                        f"/servicex/output/{output_name}",
-                        output_format,
-                    ],
-                    check=True,
-                    stderr=subprocess.PIPE,
-                )
+                command = [
+                    "docker",
+                    "run",
+                    "--name",
+                    container_name,
+                    "--rm",
+                    "-v",
+                    f"{generated_files_dir.absolute()}:/generated",
+                    "-v",
+                    f"{output_directory}:/servicex/output",
+                    *x509up_volume,
+                    self.image_name,
+                    "bash",
+                    "/generated/transform_single_file.sh",
+                    input_file,
+                    f"/servicex/output/{output_name}",
+                    output_format,
+                ]
+                run_command_with_logging(command)
                 output_paths.append(output_directory / Path(input_file).name)
 
             except subprocess.CalledProcessError as e:

@@ -3,6 +3,7 @@
         "asyncio",
         "atlaslocalgroupdisk",
         "autodoc",
+        "caplog",
         "codegen",
         "copybutton",
         "cvmfs",
