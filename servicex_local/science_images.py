@@ -23,6 +23,9 @@ def run_command_with_logging(command: List[str]) -> None:
     stdout_lines = []
     stderr_lines = []
 
+    assert process.stdout is not None
+    assert process.stderr is not None
+
     for stdout_line in iter(process.stdout.readline, ""):
         stripped_line = stdout_line.strip()
         logger.debug(stripped_line)
