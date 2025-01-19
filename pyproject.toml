@@ -46,6 +46,7 @@ test = [
     "pytest-console-scripts>=1.4.1",
     "pytest-asyncio>=0.21.0",
     "flake8>=5.0.4",
+    "func_adl_xAOD",
     "black",
 ]
 docs = [
