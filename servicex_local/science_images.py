@@ -6,28 +6,42 @@ from pathlib import Path
 from typing import List
 
 
-def run_command_with_logging(command: List[str]) -> int:
+def run_command_with_logging(command: List[str]) -> None:
     """Run a command in a subprocess and log the output.
 
     Args:
         command (List[str]): The command to run
 
-    Returns:
-        int: The command's status when it finishes running
+    Raises:
+        RuntimeError: If the command fails
     """
     logger = logging.getLogger(__name__)
     process = subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
     )
 
+    stdout_lines = []
+    stderr_lines = []
+
     for stdout_line in iter(process.stdout.readline, ""):
-        logger.debug(stdout_line.strip())
+        stripped_line = stdout_line.strip()
+        logger.debug(stripped_line)
+        stdout_lines.append(stripped_line)
     for stderr_line in iter(process.stderr.readline, ""):
-        logger.debug(stderr_line.strip())
+        stripped_line = stderr_line.strip()
+        logger.debug(stripped_line)
+        stderr_lines.append(stripped_line)
 
     process.stdout.close()
     process.stderr.close()
-    return process.wait()
+    return_code = process.wait()
+
+    if return_code != 0:
+        raise RuntimeError(
+            f"Command failed with return code {return_code}\n"
+            f"stdout:\n{'\n'.join(stdout_lines)}\n"
+            f"stderr:\n{'\n'.join(stderr_lines)}"
+        )
 
 
 class BaseScienceImage(ABC):
@@ -139,9 +153,7 @@ source {wsl_generated_files_dir}/transform_single_file.sh {wsl_input_file} {wsl_
 
             # Call the WSL command via os.system
             command = ["wsl", "-d", self._container, "bash", "-i", wsl_script_path]
-            r = run_command_with_logging(command)
-            if r != 0:
-                raise RuntimeError(f"Failed to run command: {r} - {' '.join(command)}")
+            run_command_with_logging(command)
             output_paths.append(output_directory / input_path_name)
 
         return output_paths
