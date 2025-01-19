@@ -103,7 +103,10 @@ def test_wsl2_science_error(tmp_path, request):
     wsl2 = WSL2ScienceImage("atlas_al9", "25.2.12")
     with pytest.raises(
         RuntimeError,
-        match="failed to open file root://fork.me.now//eos/opendata/atlas/rucio/mc20_13TeV/DAOD_PHYSLITE.37622528._000013.pool.root.1\nDirectInputModule",
+        match=(
+            "failed to open file root://fork.me.now//eos/opendata/atlas/rucio/mc20_13TeV"
+            "/DAOD_PHYSLITE.37622528._000013.pool.root.1\nDirectInputModule"
+        ),
     ):
         wsl2.transform(
             Path("tests/genfiles_raw/query2_xaod"),
