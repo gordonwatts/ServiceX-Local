@@ -160,13 +160,16 @@ with open("{wsl_generated_files_dir}/transformer_capabilities.json") as f:
     info = json.load(f)
 file_to_run = info["command"]
 if info["language"] == "python":
-    os.system("python3 {wsl_generated_files_dir}/" + file_to_run + " {wsl_input_file} "
+    ret_code = os.system("python3 {wsl_generated_files_dir}/" + file_to_run + " {wsl_input_file} "
         + "{wsl_output_directory}/{input_path_name} {output_format}")
 elif info["language"] == "bash":
-    os.system("bash {wsl_generated_files_dir}/" + file_to_run
+    ret_code = os.system("bash {wsl_generated_files_dir}/" + file_to_run
         + " {wsl_input_file} {wsl_output_directory}/{input_path_name} {output_format}")
 else:
     raise ValueError("Unsupported language: " + info["language"])
+
+print("Return code: " + str(ret_code))
+sys.exit(ret_code)
 """
             with open(generated_files_dir / "kick_off.py", "w", newline="\n") as f:
                 f.write(file_runner)
@@ -180,6 +183,9 @@ cd $tmp_dir
 setupATLAS
 asetup AnalysisBase,{self._release},here
 python {wsl_generated_files_dir}/kick_off.py
+r=$?
+echo "Return code is $r"
+exit $?
 """
 
             # Write the script to a temporary file
@@ -261,7 +267,6 @@ from pathlib import Path
 x509up_path = Path("/tmp/grid-security/x509up")
 if x509up_path.exists():
     os.chmod(x509up_path, 0o600)
-    os.system("ls -l /tmp/grid-security/x509up")
 
 with open("/generated/transformer_capabilities.json") as f:
     info = json.load(f)
@@ -270,11 +275,13 @@ arg1 = sys.argv[1]
 arg2 = sys.argv[2]
 arg3 = sys.argv[3]
 if info["language"] == "python":
-    os.system(f"python3 {file_to_run} {arg1} {arg2} {arg3}")
+    ret_code = os.system(f"python3 {file_to_run} {arg1} {arg2} {arg3}")
 elif info["language"] == "bash":
-    os.system(f"bash {file_to_run} {arg1} {arg2} {arg3}")
+    ret_code = os.system(f"bash {file_to_run} {arg1} {arg2} {arg3}")
 else:
     raise ValueError(f"Unsupported language: {info["language"]}")
+exit_code = ret_code >> 8
+sys.exit(exit_code)
 """
             with open(generated_files_dir / "kick_off.py", "w") as f:
                 f.write(file_runner)

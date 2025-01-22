@@ -7,5 +7,5 @@
   ],
   "stats-parser": "AODStats",
   "language": "bash",
-  "command": "/generated/transform_single_file.sh"
+  "command": "/generated/transform_a_file.sh"
 }

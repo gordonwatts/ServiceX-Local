@@ -8,7 +8,7 @@ import pytest
 from servicex_local.science_images import DockerScienceImage, WSL2ScienceImage
 
 
-def test_docker_science(tmp_path, request):
+def test_docker_science_bash(tmp_path, request):
     """Test against a docker science image - integrated (uses docker)
     WARNING: This expects to find the x509 cert!!!
     """
@@ -21,7 +21,7 @@ def test_docker_science(tmp_path, request):
     output_file_directory = tmp_path / "output"
     output_file_directory.mkdir()
 
-    source_directory = "./tests/genfiles_raw/query1_raw"
+    source_directory = "./tests/genfiles_raw/query2_bash"
     for file_name in os.listdir(source_directory):
         full_file_name = os.path.join(source_directory, file_name)
         if os.path.isfile(full_file_name):
