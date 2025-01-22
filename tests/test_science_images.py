@@ -12,8 +12,8 @@ def test_docker_science(tmp_path, request):
     """Test against a docker science image - integrated (uses docker)
     WARNING: This expects to find the x509 cert!!!
     """
-    # if not request.config.getoption("--docker"):
-    #     pytest.skip("Use the --wsl2 pytest flag to run this test")
+    if not request.config.getoption("--docker"):
+        pytest.skip("Use the --wsl2 pytest flag to run this test")
 
     # We need the files we'll use as input.
     generated_file_directory = tmp_path / "input"
