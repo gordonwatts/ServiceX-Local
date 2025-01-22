@@ -7,5 +7,5 @@
   ],
   "stats-parser": "RawUprootStats",
   "language": "python",
-  "command": "/generated/transform_single_file.py"
+  "command": "/generated/transform_a_file.py"
 }
