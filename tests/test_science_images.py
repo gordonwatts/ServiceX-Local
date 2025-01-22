@@ -1,6 +1,5 @@
 import logging
 import os
-from re import A
 import shutil
 from pathlib import Path
 
