@@ -131,3 +131,4 @@ dmypy.json
 servicex.yaml
 
 wsl_transform_script.sh
+kick_off.py
