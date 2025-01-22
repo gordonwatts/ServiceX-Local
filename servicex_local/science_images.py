@@ -160,9 +160,11 @@ with open("{wsl_generated_files_dir}/transformer_capabilities.json") as f:
     info = json.load(f)
 file_to_run = info["command"]
 if info["language"] == "python":
-    os.system("python3 {wsl_generated_files_dir}/" + file_to_run + " {wsl_input_file} {wsl_output_directory}/{input_path_name} {output_format}")
+    os.system("python3 {wsl_generated_files_dir}/" + file_to_run + " {wsl_input_file} "
+        + "{wsl_output_directory}/{input_path_name} {output_format}")
 elif info["language"] == "bash":
-    os.system("bash {wsl_generated_files_dir}/" + file_to_run + " {wsl_input_file} {wsl_output_directory}/{input_path_name} {output_format}")
+    os.system("bash {wsl_generated_files_dir}/" + file_to_run
+        + " {wsl_input_file} {wsl_output_directory}/{input_path_name} {output_format}")
 else:
     raise ValueError("Unsupported language: " + info["language"])
 """
