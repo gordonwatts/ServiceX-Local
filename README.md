@@ -61,6 +61,14 @@ To use this, example code is as follows:
     assert files is not None, "No files returned from deliver! Internal error"
 ```
 
+### Running tests
+
+If you are on a machine with `wsl2` and or `docker` you can run the complete set of tests with flags:
+
+```bash
+pytest --wsl2 --docker
+```
+
 ## Acknowledgments
 
 This `docker` versions of this code are thanks to @ketan96-m's work on [this Service MR](https://github.com/ssl-hep/ServiceX/pull/828).
