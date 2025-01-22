@@ -19,6 +19,12 @@ The science image code will pick up the location of the 509 cert.
 
 ## Usage
 
+### Certificates
+
+This will do its best to track `x509` certs. If a file called `x509up` is located in your temp directory (including on windows), that will be copied into the `docker` image or other places to be used.
+
+### Example Code
+
 This text is a **DRAFT**
 
 To use this, example code is as follows:
