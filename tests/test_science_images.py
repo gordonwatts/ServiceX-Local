@@ -10,21 +10,46 @@ from servicex_local.science_images import DockerScienceImage, WSL2ScienceImage
 
 
 @pytest.mark.parametrize(
-    "source_directory, input_files",
+    "source_directory, input_files, container_name",
     [
-        ("./tests/genfiles_raw/query2_bash", ["file1.root"]),
-        ("./tests/genfiles_raw/query1_python", ["file1.root"]),
-        ("./tests/genfiles_raw/query2_bash", ["file1.root", "file2.root"]),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["file1.root"],
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5",
+        ),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["file1.root"],
+            "sslhep/servicex_func_adl_xaod_transformer:21.2.231",
+        ),
+        (
+            "./tests/genfiles_raw/query1_python",
+            ["file1.root"],
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5",
+        ),
+        (
+            "./tests/genfiles_raw/query1_python",
+            ["file1.root"],
+            "sslhep/servicex_func_adl_xaod_transformer:21.2.231",
+        ),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["file1.root", "file2.root"],
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5",
+        ),
         (
             "./tests/genfiles_raw/query2_bash",
             [
                 "root://fax.mwt2.org:1094//pnfs/uchicago.edu/atlaslocalgroupdisk/"
                 "rucio/user.mgeyik/e7/ee/user.mgeyik.30182995._000093.out.root"
             ],
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5",
         ),
     ],
 )
-def test_docker_science_bash(tmp_path, request, source_directory, input_files):
+def test_docker_science_bash(
+    tmp_path, request, source_directory, input_files, container_name
+):
     """Test against a docker science image - integrated (uses docker)
     WARNING: This expects to find the x509 cert!!!
     """
@@ -54,7 +79,7 @@ def test_docker_science_bash(tmp_path, request, source_directory, input_files):
             actual_input_files.append(file)
 
     # Now we can run the science image
-    docker = DockerScienceImage("sslhep/servicex_func_adl_uproot_transformer:uproot5")
+    docker = DockerScienceImage(container_name)
     logging.basicConfig(level=logging.DEBUG)
     output_files = docker.transform(
         generated_file_directory, actual_input_files, output_file_directory, "root-file"

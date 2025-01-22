@@ -276,10 +276,9 @@ class DockerScienceImage(BaseScienceImage):
 import json
 import os
 import sys
-from pathlib import Path
 
-x509up_path = Path("/tmp/grid-security/x509up")
-if x509up_path.exists():
+x509up_path = "/tmp/grid-security/x509up"
+if os.path.exists(x509up_path):
     os.chmod(x509up_path, 0o600)
 
 with open("/generated/transformer_capabilities.json") as f:
@@ -289,11 +288,11 @@ arg1 = sys.argv[1]
 arg2 = sys.argv[2]
 arg3 = sys.argv[3]
 if info["language"] == "python":
-    ret_code = os.system(f"python3 {file_to_run} {arg1} {arg2} {arg3}")
+    ret_code = os.system("python " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
 elif info["language"] == "bash":
-    ret_code = os.system(f"bash {file_to_run} {arg1} {arg2} {arg3}")
+    ret_code = os.system("bash " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
 else:
-    raise ValueError(f"Unsupported language: {info["language"]}")
+    raise ValueError("Unsupported language: " + info["language"])
 exit_code = ret_code >> 8
 sys.exit(exit_code)
 """
