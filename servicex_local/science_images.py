@@ -144,6 +144,33 @@ class WSL2ScienceImage(BaseScienceImage):
                 wsl_input_file = self._convert_to_wsl_path(input_path)
                 input_path_name = input_path.name
 
+            # Create the script to parse the capabilities file.
+            file_runner = f"""#!/bin/python
+import json
+import os
+import sys
+from pathlib import Path
+
+x509up_path = Path("/tmp/grid-security/x509up")
+if x509up_path.exists():
+    os.chmod(x509up_path, 0o600)
+    os.system("ls -l /tmp/grid-security/x509up")
+
+with open("{wsl_generated_files_dir}/transformer_capabilities.json") as f:
+    info = json.load(f)
+file_to_run = info["command"]
+if info["language"] == "python":
+    os.system("python3 {wsl_generated_files_dir}/" + file_to_run + " {wsl_input_file} "
+        + "{wsl_output_directory}/{input_path_name} {output_format}")
+elif info["language"] == "bash":
+    os.system("bash {wsl_generated_files_dir}/" + file_to_run
+        + " {wsl_input_file} {wsl_output_directory}/{input_path_name} {output_format}")
+else:
+    raise ValueError("Unsupported language: " + info["language"])
+"""
+            with open(generated_files_dir / "kick_off.py", "w", newline="\n") as f:
+                f.write(file_runner)
+
             # Create the WSL script content
             wsl_script_content = f"""#!/bin/bash
 tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
@@ -152,13 +179,14 @@ cd $tmp_dir
 # source /etc/profile.d/startup-atlas.sh
 setupATLAS
 asetup AnalysisBase,{self._release},here
-source {wsl_generated_files_dir}/transform_single_file.sh {wsl_input_file} {wsl_output_directory}/{input_path_name}  # noqa
+python {wsl_generated_files_dir}/kick_off.py
 """
 
             # Write the script to a temporary file
             script_path = generated_files_dir / "wsl_transform_script.sh"
             with open(script_path, "w", newline="\n") as script_file:
                 script_file.write(wsl_script_content)
+
             # Convert script_path to a WSL accessible path
             wsl_script_path = self._convert_to_wsl_path(script_path)
 
@@ -206,7 +234,7 @@ class DockerScienceImage(BaseScienceImage):
             List[Path]: The paths to the output files
         """
         output_paths = []
-        x509up_path = Path("/tmp/x509up")
+        x509up_path = Path(os.getenv("TEMP", "/tmp")) / "x509up"
         if x509up_path.exists():
             x509up_volume = ["-v", f"{x509up_path}:/tmp/grid-security/x509up"]
         else:
@@ -222,6 +250,35 @@ class DockerScienceImage(BaseScienceImage):
 
             output_name = Path(input_file).name
 
+            # Create the file that will actually do the work. We need to look at the transformer
+            # capabilities json file to figure it out.
+            file_runner = """#!/bin/python
+import json
+import os
+import sys
+from pathlib import Path
+
+x509up_path = Path("/tmp/grid-security/x509up")
+if x509up_path.exists():
+    os.chmod(x509up_path, 0o600)
+    os.system("ls -l /tmp/grid-security/x509up")
+
+with open("/generated/transformer_capabilities.json") as f:
+    info = json.load(f)
+file_to_run = info["command"]
+arg1 = sys.argv[1]
+arg2 = sys.argv[2]
+arg3 = sys.argv[3]
+if info["language"] == "python":
+    os.system(f"python3 {file_to_run} {arg1} {arg2} {arg3}")
+elif info["language"] == "bash":
+    os.system(f"bash {file_to_run} {arg1} {arg2} {arg3}")
+else:
+    raise ValueError(f"Unsupported language: {info["language"]}")
+"""
+            with open(generated_files_dir / "kick_off.py", "w") as f:
+                f.write(file_runner)
+
             try:
                 command = [
                     "docker",
@@ -235,8 +292,8 @@ class DockerScienceImage(BaseScienceImage):
                     f"{output_directory}:/servicex/output",
                     *x509up_volume,
                     self.image_name,
-                    "bash",
-                    "/generated/transform_single_file.sh",
+                    "python",
+                    "/generated/kick_off.py",
                     input_file,
                     f"/servicex/output/{output_name}",
                     output_format,
