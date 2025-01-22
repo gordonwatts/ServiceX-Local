@@ -1,5 +1,6 @@
 import logging
 import os
+from re import A
 import shutil
 from pathlib import Path
 
@@ -8,7 +9,18 @@ import pytest
 from servicex_local.science_images import DockerScienceImage, WSL2ScienceImage
 
 
-def test_docker_science_bash(tmp_path, request):
+@pytest.mark.parametrize(
+    "input_files",
+    [
+        ["file1.root"],
+        ["file1.root", "file2.root"],
+        [
+            "root://fax.mwt2.org:1094//pnfs/uchicago.edu/atlaslocalgroupdisk/"
+            "rucio/user/mgeyik/e7/ee/user.mgeyik.30182995._000093.out.root"
+        ],
+    ],
+)
+def test_docker_science_bash(tmp_path, request, input_files):
     """Test against a docker science image - integrated (uses docker)
     WARNING: This expects to find the x509 cert!!!
     """
@@ -27,20 +39,26 @@ def test_docker_science_bash(tmp_path, request):
         if os.path.isfile(full_file_name):
             shutil.copy(full_file_name, generated_file_directory)
 
-    # Now we can run the science image
+    # Create input files in tmp_path/input_data if they don't start with root://
+    input_data_directory = tmp_path / "input_data"
+    input_data_directory.mkdir()
+    actual_input_files = []
+    for file in input_files:
+        if not file.startswith("root://"):
+            (input_data_directory / file).touch()
+            actual_input_files.append(str(input_data_directory / file))
+        else:
+            actual_input_files.append(file)
 
-    input_files = [
-        "root://fax.mwt2.org:1094//pnfs/uchicago.edu/atlaslocalgroupdisk/"
-        "rucio/user/mgeyik/e7/ee/user.mgeyik.30182995._000093.out.root"
-    ]
+    # Now we can run the science image
     docker = DockerScienceImage("sslhep/servicex_func_adl_uproot_transformer:uproot5")
     logging.basicConfig(level=logging.DEBUG)
     output_files = docker.transform(
-        generated_file_directory, input_files, output_file_directory, "root-file"
+        generated_file_directory, actual_input_files, output_file_directory, "root-file"
     )
 
-    assert len(output_files) == 1
-    assert output_files[0].exists()
+    assert len(output_files) == len(actual_input_files)
+    assert all(o.exists() for o in output_files)
 
 
 def test_wsl2_science(tmp_path, caplog, request):

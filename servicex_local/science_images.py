@@ -256,6 +256,20 @@ class DockerScienceImage(BaseScienceImage):
 
             output_name = Path(input_file).name
 
+            # Create docker mapping string for the input file if it exists.
+            if input_file.startswith("root://") or input_file.startswith("http://"):
+                input_volume = []
+                container_path = input_file
+            else:
+                input_path = Path(input_file)
+                if not input_path.exists():
+                    raise FileNotFoundError(
+                        f"Input file for docker science image {input_file}"
+                        " not found."
+                    )
+                input_volume = ["-v", f"{str(input_path.absolute())}:/input_file.root"]
+                container_path = "/input_file.root"
+
             # Create the file that will actually do the work. We need to look at the transformer
             # capabilities json file to figure it out.
             file_runner = """#!/bin/python
@@ -298,10 +312,11 @@ sys.exit(exit_code)
                     "-v",
                     f"{output_directory}:/servicex/output",
                     *x509up_volume,
+                    *input_volume,
                     self.image_name,
                     "python",
                     "/generated/kick_off.py",
-                    input_file,
+                    container_path,
                     f"/servicex/output/{output_name}",
                     output_format,
                 ]
