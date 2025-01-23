@@ -149,16 +149,17 @@ class WSL2ScienceImage(BaseScienceImage):
 import json
 import os
 import sys
-from pathlib import Path
 
-x509up_path = Path("/tmp/grid-security/x509up")
-if x509up_path.exists():
+x509up_path = "/tmp/grid-security/x509up"
+if os.path.exists(x509up_path):
     os.chmod(x509up_path, 0o600)
-    os.system("ls -l /tmp/grid-security/x509up")
+    os.system("ls -l " + x509up_path)
 
 with open("{wsl_generated_files_dir}/transformer_capabilities.json") as f:
     info = json.load(f)
 file_to_run = info["command"]
+# Strip off the default /generated from the file name.
+file_to_run = file_to_run.replace("/generated", "")
 if info["language"] == "python":
     ret_code = os.system("python3 {wsl_generated_files_dir}/" + file_to_run + " {wsl_input_file} "
         + "{wsl_output_directory}/{input_path_name} {output_format}")
@@ -168,8 +169,8 @@ elif info["language"] == "bash":
 else:
     raise ValueError("Unsupported language: " + info["language"])
 
-print("Return code: " + str(ret_code))
-sys.exit(ret_code)
+exit_code = ret_code >> 8
+sys.exit(exit_code)
 """
             with open(generated_files_dir / "kick_off.py", "w", newline="\n") as f:
                 f.write(file_runner)
@@ -178,13 +179,13 @@ sys.exit(ret_code)
             wsl_script_content = f"""#!/bin/bash
 tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
 cd $tmp_dir
+pwd
 
 # source /etc/profile.d/startup-atlas.sh
 setupATLAS
 asetup AnalysisBase,{self._release},here
 python {wsl_generated_files_dir}/kick_off.py
 r=$?
-echo "Return code is $r"
 exit $?
 """
 
