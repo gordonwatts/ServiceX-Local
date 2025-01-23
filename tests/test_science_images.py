@@ -178,15 +178,18 @@ def test_wsl2_science_logging(tmp_path, caplog, request):
     if not request.config.getoption("--wsl2"):
         pytest.skip("Use the --wsl2 pytest flag to run this test")
 
+    generated_file_directory, actual_input_files, output_file_directory = (
+        prepare_input_files(
+            tmp_path, "tests/genfiles_raw/query6_logging", ["file1.root"]
+        )
+    )
+
     with caplog.at_level(logging.DEBUG):
         wsl2 = WSL2ScienceImage("atlas_al9", "25.2.12")
         wsl2.transform(
-            Path("tests/genfiles_raw/query6_logging"),
-            [
-                "root://eospublic.cern.ch//eos/opendata/atlas/rucio/mc20_13TeV/"
-                "DAOD_PHYSLITE.37622528._000013.pool.root.1"
-            ],
-            tmp_path / "output",
+            generated_file_directory,
+            actual_input_files,
+            output_file_directory,
             "root-file",
         )
 
@@ -198,15 +201,20 @@ def test_docker_science_logging(tmp_path, caplog, request):
     if not request.config.getoption("--docker"):
         pytest.skip("Use the --wsl2 pytest flag to run this test")
 
+    generated_file_directory, actual_input_files, output_file_directory = (
+        prepare_input_files(
+            tmp_path, "tests/genfiles_raw/query6_logging", ["file1.root"]
+        )
+    )
+
     with caplog.at_level(logging.DEBUG):
-        wsl2 = DockerScienceImage("sslhep/servicex_func_adl_uproot_transformer:uproot5")
-        wsl2.transform(
-            Path("tests/genfiles_raw/query6_logging"),
-            [
-                "root://eospublic.cern.ch//eos/opendata/atlas/rucio/mc20_13TeV/"
-                "DAOD_PHYSLITE.37622528._000013.pool.root.1"
-            ],
-            tmp_path / "output",
+        docker = DockerScienceImage(
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5"
+        )
+        docker.transform(
+            generated_file_directory,
+            actual_input_files,
+            output_file_directory,
             "root-file",
         )
 
