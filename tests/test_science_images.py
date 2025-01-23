@@ -174,17 +174,14 @@ def test_wsl2_science(
 
 
 def test_wsl2_science_logging(tmp_path, caplog, request):
-    """Test a xAOD transform on a WSL2 atlas distribution
-    This test takes about 100 seconds to run on a connection
-    that is reasonable (at home). Takes 300 to 400 seconds if
-    cvmfs is cold.
-    """
+    """Run a simple wsl2 transform and make sure we pick up log messages."""
     if not request.config.getoption("--wsl2"):
         pytest.skip("Use the --wsl2 pytest flag to run this test")
+
     with caplog.at_level(logging.DEBUG):
         wsl2 = WSL2ScienceImage("atlas_al9", "25.2.12")
-        outputs = wsl2.transform(
-            Path("tests/genfiles_raw/query2_xaod"),
+        wsl2.transform(
+            Path("tests/genfiles_raw/query6_logging"),
             [
                 "root://eospublic.cern.ch//eos/opendata/atlas/rucio/mc20_13TeV/"
                 "DAOD_PHYSLITE.37622528._000013.pool.root.1"
@@ -193,9 +190,27 @@ def test_wsl2_science_logging(tmp_path, caplog, request):
             "root-file",
         )
 
-    assert len(outputs) == 1
-    outputs[0].exists()
-    assert "release_setup.sh" in caplog.text
+    assert "this is log line 2" in caplog.text
+
+
+def test_docker_science_logging(tmp_path, caplog, request):
+    """Run a simple wsl2 transform and make sure we pick up log messages."""
+    if not request.config.getoption("--docker"):
+        pytest.skip("Use the --wsl2 pytest flag to run this test")
+
+    with caplog.at_level(logging.DEBUG):
+        wsl2 = DockerScienceImage("sslhep/servicex_func_adl_uproot_transformer:uproot5")
+        wsl2.transform(
+            Path("tests/genfiles_raw/query6_logging"),
+            [
+                "root://eospublic.cern.ch//eos/opendata/atlas/rucio/mc20_13TeV/"
+                "DAOD_PHYSLITE.37622528._000013.pool.root.1"
+            ],
+            tmp_path / "output",
+            "root-file",
+        )
+
+    assert "this is log line 2" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -277,7 +292,7 @@ def test_docker_science_error(
     that is reasonable (at home). Takes 300 to 400 seconds if
     cvmfs is cold.
     """
-    if not request.config.getoption("--wsl2"):
+    if not request.config.getoption("--docker"):
         pytest.skip("Use the --wsl2 pytest flag to run this test")
 
     generated_file_directory, actual_input_files, output_file_directory = (
