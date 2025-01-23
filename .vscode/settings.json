@@ -26,5 +26,9 @@
         "userkey",
         "voms",
         "xaodr"
+    ],
+    "python.testing.pytestArgs": [
+        "--wsl2",
+        "--docker"
     ]
 }

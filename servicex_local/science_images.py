@@ -40,21 +40,18 @@ def run_command_with_logging(command: List[str]) -> None:
     return_code = process.wait()
 
     if return_code != 0:
+        # Output the log as info
+        logger = logging.getLogger(__name__)
+        for line in stdout_lines:
+            logger.info(line)
+        for line in stderr_lines:
+            logger.info(line)
+
         # TODO: Once we are done with 3.11, get rid of newline. Problem is
         #       we can't have a \n in an f-string for the older versions of python.
-        newline = "\n"
         raise RuntimeError(
-            f"Command failed with return code {return_code}"
-            + newline
-            + f"command: {' '.join(command)}"
-            + newline
-            + "stdout:"
-            + newline
-            + f"{'-'.join(stdout_lines)}"
-            + newline
-            + "stderr:"
-            + newline
-            + f"{'-'.join(stderr_lines)}"
+            f"Failed to run SX science payload locally with exit_code={return_code} "
+            "({' '.join(command)}). See INFO python logging messages for more details"
         )
 
 
@@ -131,6 +128,9 @@ class WSL2ScienceImage(BaseScienceImage):
         wsl_output_directory = self._convert_to_wsl_path(output_directory)
 
         # Translate generated files dir to WSL2 path
+        assert (
+            generated_files_dir.exists()
+        ), f"Missing generate files directory: {generated_files_dir}!"
         wsl_generated_files_dir = self._convert_to_wsl_path(generated_files_dir)
 
         for input_file in input_files:
@@ -141,6 +141,7 @@ class WSL2ScienceImage(BaseScienceImage):
             else:
                 # Translate input_file to WSL2 path
                 input_path = Path(input_file)
+                assert input_path.exists(), f"Missing input file: {input_file}"
                 wsl_input_file = self._convert_to_wsl_path(input_path)
                 input_path_name = input_path.name
 
@@ -149,24 +150,28 @@ class WSL2ScienceImage(BaseScienceImage):
 import json
 import os
 import sys
-from pathlib import Path
 
-x509up_path = Path("/tmp/grid-security/x509up")
-if x509up_path.exists():
+x509up_path = "/tmp/grid-security/x509up"
+if os.path.exists(x509up_path):
     os.chmod(x509up_path, 0o600)
-    os.system("ls -l /tmp/grid-security/x509up")
+    os.system("ls -l " + x509up_path)
 
 with open("{wsl_generated_files_dir}/transformer_capabilities.json") as f:
     info = json.load(f)
 file_to_run = info["command"]
+# Strip off the default /generated from the file name.
+file_to_run = file_to_run.replace("/generated", "")
 if info["language"] == "python":
-    os.system("python3 {wsl_generated_files_dir}/" + file_to_run + " {wsl_input_file} "
+    ret_code = os.system("python3 {wsl_generated_files_dir}/" + file_to_run + " {wsl_input_file} "
         + "{wsl_output_directory}/{input_path_name} {output_format}")
 elif info["language"] == "bash":
-    os.system("bash {wsl_generated_files_dir}/" + file_to_run
+    ret_code = os.system("bash {wsl_generated_files_dir}/" + file_to_run
         + " {wsl_input_file} {wsl_output_directory}/{input_path_name} {output_format}")
 else:
     raise ValueError("Unsupported language: " + info["language"])
+
+exit_code = ret_code >> 8
+sys.exit(exit_code)
 """
             with open(generated_files_dir / "kick_off.py", "w", newline="\n") as f:
                 f.write(file_runner)
@@ -175,11 +180,14 @@ else:
             wsl_script_content = f"""#!/bin/bash
 tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
 cd $tmp_dir
+pwd
 
 # source /etc/profile.d/startup-atlas.sh
 setupATLAS
 asetup AnalysisBase,{self._release},here
 python {wsl_generated_files_dir}/kick_off.py
+r=$?
+exit $r
 """
 
             # Write the script to a temporary file
@@ -250,18 +258,30 @@ class DockerScienceImage(BaseScienceImage):
 
             output_name = Path(input_file).name
 
+            # Create docker mapping string for the input file if it exists.
+            if input_file.startswith("root://") or input_file.startswith("http://"):
+                input_volume = []
+                container_path = input_file
+            else:
+                input_path = Path(input_file)
+                if not input_path.exists():
+                    raise FileNotFoundError(
+                        f"Input file for docker science image {input_file}"
+                        " not found."
+                    )
+                input_volume = ["-v", f"{str(input_path.absolute())}:/input_file.root"]
+                container_path = "/input_file.root"
+
             # Create the file that will actually do the work. We need to look at the transformer
             # capabilities json file to figure it out.
             file_runner = """#!/bin/python
 import json
 import os
 import sys
-from pathlib import Path
 
-x509up_path = Path("/tmp/grid-security/x509up")
-if x509up_path.exists():
+x509up_path = "/tmp/grid-security/x509up"
+if os.path.exists(x509up_path):
     os.chmod(x509up_path, 0o600)
-    os.system("ls -l /tmp/grid-security/x509up")
 
 with open("/generated/transformer_capabilities.json") as f:
     info = json.load(f)
@@ -270,11 +290,13 @@ arg1 = sys.argv[1]
 arg2 = sys.argv[2]
 arg3 = sys.argv[3]
 if info["language"] == "python":
-    os.system(f"python3 {file_to_run} {arg1} {arg2} {arg3}")
+    ret_code = os.system("python " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
 elif info["language"] == "bash":
-    os.system(f"bash {file_to_run} {arg1} {arg2} {arg3}")
+    ret_code = os.system("bash " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
 else:
-    raise ValueError(f"Unsupported language: {info["language"]}")
+    raise ValueError("Unsupported language: " + info["language"])
+exit_code = ret_code >> 8
+sys.exit(exit_code)
 """
             with open(generated_files_dir / "kick_off.py", "w") as f:
                 f.write(file_runner)
@@ -291,10 +313,11 @@ else:
                     "-v",
                     f"{output_directory}:/servicex/output",
                     *x509up_volume,
+                    *input_volume,
                     self.image_name,
                     "python",
                     "/generated/kick_off.py",
-                    input_file,
+                    container_path,
                     f"/servicex/output/{output_name}",
                     output_format,
                 ]
