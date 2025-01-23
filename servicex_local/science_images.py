@@ -40,21 +40,18 @@ def run_command_with_logging(command: List[str]) -> None:
     return_code = process.wait()
 
     if return_code != 0:
+        # Output the log as info
+        logger = logging.getLogger(__name__)
+        for line in stdout_lines:
+            logger.info(line)
+        for line in stderr_lines:
+            logger.info(line)
+
         # TODO: Once we are done with 3.11, get rid of newline. Problem is
         #       we can't have a \n in an f-string for the older versions of python.
-        newline = "\n"
         raise RuntimeError(
-            f"Command failed with exit_code={return_code}"
-            + newline
-            + f"command: {' '.join(command)}"
-            + newline
-            + "stdout:"
-            + newline
-            + f"{'-'.join(stdout_lines)}"
-            + newline
-            + "stderr:"
-            + newline
-            + f"{'-'.join(stderr_lines)}"
+            f"Command failed with exit_code={return_code} ({' '.join(command)}). "
+            "See INFO python logging messages for more details"
         )
 
 
