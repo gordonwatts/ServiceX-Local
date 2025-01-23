@@ -44,7 +44,7 @@ def run_command_with_logging(command: List[str]) -> None:
         #       we can't have a \n in an f-string for the older versions of python.
         newline = "\n"
         raise RuntimeError(
-            f"Command failed with return code {return_code}"
+            f"Command failed with exit_code={return_code}"
             + newline
             + f"command: {' '.join(command)}"
             + newline
@@ -131,6 +131,9 @@ class WSL2ScienceImage(BaseScienceImage):
         wsl_output_directory = self._convert_to_wsl_path(output_directory)
 
         # Translate generated files dir to WSL2 path
+        assert (
+            generated_files_dir.exists()
+        ), f"Missing generate files directory: {generated_files_dir}!"
         wsl_generated_files_dir = self._convert_to_wsl_path(generated_files_dir)
 
         for input_file in input_files:
@@ -141,6 +144,7 @@ class WSL2ScienceImage(BaseScienceImage):
             else:
                 # Translate input_file to WSL2 path
                 input_path = Path(input_file)
+                assert input_path.exists(), f"Missing input file: {input_file}"
                 wsl_input_file = self._convert_to_wsl_path(input_path)
                 input_path_name = input_path.name
 
@@ -186,7 +190,7 @@ setupATLAS
 asetup AnalysisBase,{self._release},here
 python {wsl_generated_files_dir}/kick_off.py
 r=$?
-exit $?
+exit $r
 """
 
             # Write the script to a temporary file
