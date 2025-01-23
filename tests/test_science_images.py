@@ -242,11 +242,8 @@ def test_wsl2_science_error(
         match=(exception_message),
     ):
         wsl2.transform(
-            Path(transform_path),
-            [
-                "root://fork.me.now//eos/opendata/atlas/rucio/mc20_13TeV/"
-                "DAOD_PHYSLITE.37622528._000013.pool.root.1"
-            ],
-            tmp_path / "output",
+            generated_file_directory,
+            actual_input_files,
+            output_file_directory,
             "root-file",
         )
