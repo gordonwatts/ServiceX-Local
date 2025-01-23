@@ -1,3 +1,1 @@
-import sys
-
-sys.exit(10)
+raise RuntimeError("This is a big failure")

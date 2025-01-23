@@ -247,3 +247,51 @@ def test_wsl2_science_error(
             output_file_directory,
             "root-file",
         )
+
+
+@pytest.mark.parametrize(
+    "container_name, transform_path, exception_message",
+    [
+        (
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5",
+            "tests/genfiles_raw/query3_bash_exit_error",
+            "exit_code=10",
+        ),
+        (
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5",
+            "tests/genfiles_raw/query4_python_exit_error",
+            "exit_code=10",
+        ),
+        (
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5",
+            "tests/genfiles_raw/query5_python_exception_error",
+            "exit_code=1",
+        ),
+    ],
+)
+def test_docker_science_error(
+    tmp_path, request, container_name, transform_path, exception_message
+):
+    """Test a xAOD transform on a docker atlas distribution
+    This test takes about 100 seconds to run on a connection
+    that is reasonable (at home). Takes 300 to 400 seconds if
+    cvmfs is cold.
+    """
+    if not request.config.getoption("--wsl2"):
+        pytest.skip("Use the --wsl2 pytest flag to run this test")
+
+    generated_file_directory, actual_input_files, output_file_directory = (
+        prepare_input_files(tmp_path, transform_path, ["file1.root"])
+    )
+
+    docker = DockerScienceImage(container_name)
+    with pytest.raises(
+        RuntimeError,
+        match=(exception_message),
+    ):
+        docker.transform(
+            generated_file_directory,
+            actual_input_files,
+            output_file_directory,
+            "root-file",
+        )
