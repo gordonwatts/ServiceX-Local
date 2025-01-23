@@ -50,8 +50,8 @@ def run_command_with_logging(command: List[str]) -> None:
         # TODO: Once we are done with 3.11, get rid of newline. Problem is
         #       we can't have a \n in an f-string for the older versions of python.
         raise RuntimeError(
-            f"Command failed with exit_code={return_code} ({' '.join(command)}). "
-            "See INFO python logging messages for more details"
+            f"Failed to run SX science payload locally with exit_code={return_code} "
+            "({' '.join(command)}). See INFO python logging messages for more details"
         )
 
 
