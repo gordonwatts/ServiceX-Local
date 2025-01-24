@@ -197,7 +197,7 @@ def test_wsl2_science_logging(tmp_path, caplog, request):
 
 
 def test_docker_science_logging(tmp_path, caplog, request):
-    """Run a simple wsl2 transform and make sure we pick up log messages."""
+    """Run a simple docker transform and make sure we pick up log messages."""
     if not request.config.getoption("--docker"):
         pytest.skip("Use the --wsl2 pytest flag to run this test")
 
@@ -219,6 +219,32 @@ def test_docker_science_logging(tmp_path, caplog, request):
         )
 
     assert "this is log line 2" in caplog.text
+
+
+def test_docker_science_log_warnings(tmp_path, caplog, request):
+    """Run a simple docker transform and make sure we pick up warning or error log messages."""
+    if not request.config.getoption("--docker"):
+        pytest.skip("Use the --wsl2 pytest flag to run this test")
+
+    generated_file_directory, actual_input_files, output_file_directory = (
+        prepare_input_files(
+            tmp_path, "tests/genfiles_raw/query7_logging_warnings", ["file1.root"]
+        )
+    )
+
+    with caplog.at_level(logging.WARNING):
+        docker = DockerScienceImage(
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5"
+        )
+        docker.transform(
+            generated_file_directory,
+            actual_input_files,
+            output_file_directory,
+            "root-file",
+        )
+
+    assert "this is log line 2" in caplog.text
+    assert "this is log line 1" in caplog.text
 
 
 @pytest.mark.parametrize(
