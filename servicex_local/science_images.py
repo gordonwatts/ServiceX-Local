@@ -28,11 +28,14 @@ def run_command_with_logging(command: List[str]) -> None:
 
     for stdout_line in iter(process.stdout.readline, ""):
         stripped_line = stdout_line.strip()
-        logger.debug(stripped_line)
         stdout_lines.append(stripped_line)
+        if "error" in stripped_line.lower() or "warning" in stripped_line.lower():
+            logger.warning(stripped_line)
+        else:
+            logger.debug(stripped_line)
     for stderr_line in iter(process.stderr.readline, ""):
         stripped_line = stderr_line.strip()
-        logger.debug(stripped_line)
+        logger.warning(stripped_line)
         stderr_lines.append(stripped_line)
 
     process.stdout.close()
