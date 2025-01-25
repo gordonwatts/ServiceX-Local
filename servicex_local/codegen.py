@@ -56,6 +56,8 @@ class LocalXAODCodegen(SXCodeGen):
         Args:
             query (str): The quastle/ query for an xAOD file.
             directory (Path): Where the output files should be written.
+            transformer_capabilities_file (Optional[Path]): This argument is ignored
+                for this code generator (and the proper one is used).
 
         Returns:
             Path: The directory where the path should be written
