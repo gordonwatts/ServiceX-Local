@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from io import BytesIO
+from typing import Optional
 from zipfile import ZipFile
 from requests_toolbelt.multipart import decoder
 from pathlib import Path
@@ -16,13 +17,20 @@ class SXCodeGen(ABC):
         pass
 
     @abstractmethod
-    def gen_code(self, query: str, directory: Path) -> Path:
+    def gen_code(
+        self,
+        query: str,
+        directory: Path,
+        transformer_capabilities_file: Optional[Path] = None,
+    ) -> Path:
         """Generate code based on the query and save all files to the
         requested directory.
 
         Args:
             query: The query string to generate code for.
             directory: The path to the directory where the code should be saved.
+            transformer_capabilities_file: The path to the transformer capabilities file.
+                If None, no file is used.
 
         Returns:
             Path: The path to the directory where the code was saved.
@@ -37,12 +45,19 @@ class LocalXAODCodegen(SXCodeGen):
         """
         pass
 
-    def gen_code(self, query: str, directory: Path) -> Path:
+    def gen_code(
+        self,
+        query: str,
+        directory: Path,
+        transformer_capabilities_file: Optional[Path] = None,
+    ) -> Path:
         """Generate the code and return a path to the directory where the code is stored.
 
         Args:
             query (str): The quastle/ query for an xAOD file.
             directory (Path): Where the output files should be written.
+            transformer_capabilities_file (Optional[Path]): This argument is ignored
+                for this code generator (and the proper one is used).
 
         Returns:
             Path: The directory where the path should be written
@@ -70,6 +85,10 @@ class LocalXAODCodegen(SXCodeGen):
         # Copy the template file to the directory
         template_file = Path(__file__).parent / "templates" / "transform_single_file.sh"
         shutil.copy(template_file, directory)
+        transformer_file = (
+            Path(__file__).parent / "templates" / "transformer_capabilities_xaod.json"
+        )
+        shutil.copy(transformer_file, directory / "transformer_capabilities.json")
 
         return directory
 
@@ -84,7 +103,12 @@ class DockerCodegen(SXCodeGen):
         """
         self.image_name = image_name
 
-    def gen_code(self, query: str, directory: Path) -> Path:
+    def gen_code(
+        self,
+        query: str,
+        directory: Path,
+        transformer_capabilities_file: Optional[Path] = None,
+    ) -> Path:
         """Run the code generator docker image, and save the results
         to the given directory.
 
@@ -94,6 +118,7 @@ class DockerCodegen(SXCodeGen):
         Args:
             query (str): The `quastle` (or other format) query.
             directory (Path): Where the output files should be written.
+            transformer_capabilities_file (Optional[Path]): The path to the transformer
 
         Returns:
             Path: compressed file containing all the code required.
@@ -146,6 +171,13 @@ class DockerCodegen(SXCodeGen):
         if not directory.exists():
             directory.mkdir(parents=True)
         zipfile.extractall(directory)
+
+        # Copy over the transformer capabilities file if it was provided.
+        if transformer_capabilities_file is not None:
+            shutil.copy(
+                transformer_capabilities_file,
+                directory / "transformer_capabilities.json",
+            )
 
         # The request should come back as a zip file. We now unpack that.
         return directory
