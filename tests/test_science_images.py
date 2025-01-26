@@ -344,3 +344,55 @@ def test_docker_science_error(
             output_file_directory,
             "root-file",
         )
+
+
+def test_docker_stderr_ordering(tmp_path, caplog, request):
+    "Make sure that we can deal with stderr and stdout messages interleaved"
+    if not request.config.getoption("--docker"):
+        pytest.skip("Use the --wsl2 pytest flag to run this test")
+
+    generated_file_directory, actual_input_files, output_file_directory = (
+        prepare_input_files(
+            tmp_path, "tests/genfiles_raw/query8_stderr", ["file1.root"]
+        )
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        docker = DockerScienceImage(
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5"
+        )
+        docker.transform(
+            generated_file_directory,
+            actual_input_files,
+            output_file_directory,
+            "root-file",
+        )
+
+    expected_messages = [
+        "This is a test message to stderr",
+        "This is a test message to stderr",
+        "This is a test message to stderr",
+        "This is a test message to stderr",
+        "This is a test message to stderr",
+        "This is a test message to stdout",
+        "This is a test message to stdout",
+        "This is a test message to stdout",
+        "This is a test message to stdout",
+        "This is a test message to stdout",
+        "This is a test message to stderr",
+        "This is a test message to stderr",
+        "This is a test message to stderr",
+        "This is a test message to stderr",
+        "This is a test message to stderr",
+        "This is a test message to stderr",
+        "This is a test message to stdout",
+    ]
+
+    log_messages = [record.message for record in caplog.records]
+    for log_message in log_messages:
+        if expected_messages[0] in log_message:
+            expected_messages.pop(0)
+        if len(expected_messages) == 0:
+            break
+
+    assert len(expected_messages) == 0

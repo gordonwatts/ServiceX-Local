@@ -17,14 +17,12 @@ def run_command_with_logging(command: List[str]) -> None:
     """
     logger = logging.getLogger(__name__)
     process = subprocess.Popen(
-        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
     )
 
     stdout_lines = []
-    stderr_lines = []
 
     assert process.stdout is not None
-    assert process.stderr is not None
 
     for stdout_line in iter(process.stdout.readline, ""):
         stripped_line = stdout_line.strip()
@@ -33,21 +31,14 @@ def run_command_with_logging(command: List[str]) -> None:
             logger.warning(stripped_line)
         else:
             logger.debug(stripped_line)
-    for stderr_line in iter(process.stderr.readline, ""):
-        stripped_line = stderr_line.strip()
-        logger.warning(stripped_line)
-        stderr_lines.append(stripped_line)
 
     process.stdout.close()
-    process.stderr.close()
     return_code = process.wait()
 
     if return_code != 0:
         # Output the log as info
         logger = logging.getLogger(__name__)
         for line in stdout_lines:
-            logger.info(line)
-        for line in stderr_lines:
             logger.info(line)
 
         # TODO: Once we are done with 3.11, get rid of newline. Problem is
