@@ -23,9 +23,10 @@ from servicex_local import (
 from servicex_local.adaptor import MinioLocalAdaptor
 
 
-@pytest.mark.skip(reason="This test needs wsl2 to be installed")
-def test_adaptor_xaod_wsl2():
+def test_adaptor_xaod_wsl2(request):
     "Run a test with the WSL2 acting as the science image"
+    if not request.config.getoption("--wsl2"):
+        pytest.skip("Use the --wsl2 pytest flag to run this test")
 
     # Dummy out the cache manager so no results are cached.
 
@@ -78,9 +79,11 @@ def test_adaptor_xaod_wsl2():
     assert Path(local_files[0]).exists()
 
 
-@pytest.mark.skip(reason="This test needs docker to be installed")
-def test_adaptor_xaod_docker():
+def test_adaptor_xaod_docker(request):
     "Use docker as back end to make sure our scripts are portable!"
+    if not request.config.getoption("--docker"):
+        pytest.skip("Use the --wsl2 pytest flag to run this test")
+
     # Here starts the test code
     codegen = LocalXAODCodegen()
     science_runner = DockerScienceImage(
