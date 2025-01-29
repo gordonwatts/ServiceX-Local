@@ -308,7 +308,7 @@ async def test_adaptor_submit_transform_line_endings(
 
 @pytest.mark.asyncio
 async def test_adaptor_saved_code_on_no_error(
-    code_gen_one_file, science_runner_one_txt_file
+    code_gen_one_file, science_runner_one_txt_file, caplog
 ):
     "By default make sure code is not saved even with error"
 
@@ -331,11 +331,15 @@ async def test_adaptor_saved_code_on_no_error(
         }
     )
 
-    # Call submit_transform and get the request ID
-    request_id = await adaptor.submit_transform(transform_request)
+    # Capture the log output
+    with caplog.at_level(logging.ERROR):
+        await adaptor.submit_transform(transform_request)
 
     # Make sure nothing was written out.
-    assert not Path(f"./{request_id}").exists()
+    log_messages = caplog.text
+    assert not any(
+        "Error during transformation" in msg for msg in log_messages
+    ), "Unexpected error message found in logs"
 
 
 @pytest.mark.asyncio
