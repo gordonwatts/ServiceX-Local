@@ -38,7 +38,9 @@ def run_command_with_logging(command: List[str], log_file: Path) -> None:
         for stdout_line in iter(process.stdout.readline, ""):
             stripped_line = stdout_line.strip()
             stdout_lines.append(stripped_line)
-            if "error" in stripped_line.lower() or "warning" in stripped_line.lower():
+            if "error" in stripped_line.lower():
+                logger.error(stripped_line)
+            elif "warning" in stripped_line.lower():
                 logger.warning(stripped_line)
             else:
                 logger.debug(stripped_line)
