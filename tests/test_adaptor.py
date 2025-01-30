@@ -37,6 +37,18 @@ def test_adaptor_xaod_wsl2(request):
         codegen, science_runner, "atlasr22", "http://localhost:5001"
     )
 
+    from servicex.configuration import Configuration, Endpoint
+
+    Configuration.register_endpoint(
+        Endpoint(
+            name="test-backend",
+            adapter=adaptor,
+            minio=MinioLocalAdaptor.for_transform,
+            # TODO: Endpoint is still required, even though not used.
+            endpoint="bogus",
+        )
+    )
+
     logging.basicConfig(level=logging.DEBUG)
 
     # The simple query, take straight from the example in the documentation.
@@ -67,8 +79,6 @@ def test_adaptor_xaod_wsl2(request):
     files = deliver(
         spec,
         servicex_name="test-backend",
-        servicex_adaptor=adaptor,  # type: ignore
-        minio_adaptor_class=MinioLocalAdaptor,
     )
     assert files is not None, "No files returned from deliver! Internal error"
 
