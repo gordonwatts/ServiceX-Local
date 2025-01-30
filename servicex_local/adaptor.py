@@ -12,6 +12,8 @@ from servicex_local.science_images import BaseScienceImage
 from pathlib import Path
 import tempfile
 import uuid
+import shutil
+import logging
 
 
 def _rewrite_sh_files(directory: Path):
@@ -121,34 +123,55 @@ class SXLocalAdaptor:
         6. Returns the GUID as the request ID.
         """
         with tempfile.TemporaryDirectory() as generated_files_dir:
-            generated_files_dir = Path(generated_files_dir)
-            self.codegen.gen_code(transform_request.selection, generated_files_dir)
-
-            # Make sure all files have proper line endings
-            _rewrite_sh_files(generated_files_dir)
-
-            # Create a unique directory for the output files directly under the temp directory
             request_id = str(uuid.uuid4())
-            output_directory = Path(tempfile.gettempdir()) / f"servicex/{request_id}"
-            output_directory.mkdir(parents=True, exist_ok=True)
+            try:
+                generated_files_dir = Path(generated_files_dir)
+                self.codegen.gen_code(transform_request.selection, generated_files_dir)
 
-            # Run the science image to perform the transformation
-            input_files = transform_request.file_list
-            assert input_files is not None, "Local transform needs an actual file list"
-            output_format = transform_request.result_format.name
+                # Make sure all files have proper line endings
+                _rewrite_sh_files(generated_files_dir)
 
-            output_files = self.science_runner.transform(
-                generated_files_dir, input_files, output_directory, output_format
-            )
+                # Create a unique directory for the output files directly under the temp directory
+                output_directory = (
+                    Path(tempfile.gettempdir()) / f"servicex/{request_id}"
+                )
+                output_directory.mkdir(parents=True, exist_ok=True)
 
-            # Store the TransformStatus indexed by a GUID
-            transform_status = self.create_transform_status(
-                transform_request, request_id, output_files
-            )
-            self.transform_status_store[request_id] = transform_status
+                # Run the science image to perform the transformation
+                input_files = transform_request.file_list
+                assert (
+                    input_files is not None
+                ), "Local transform needs an actual file list"
+                output_format = transform_request.result_format.name
 
-            # Return the GUID as the request ID
-            return request_id
+                output_files = self.science_runner.transform(
+                    generated_files_dir, input_files, output_directory, output_format
+                )
+
+                # Store the TransformStatus indexed by a GUID
+                transform_status = self.create_transform_status(
+                    transform_request, request_id, output_files
+                )
+                self.transform_status_store[request_id] = transform_status
+
+                # Return the GUID as the request ID
+                return request_id
+
+            except Exception:
+                # Copy the files in generated_files_dir to the temp directory
+                dest_dir = (
+                    Path(tempfile.gettempdir()) / f"servicex_request_{request_id}"
+                )
+                shutil.copytree(generated_files_dir, dest_dir)
+
+                # Log an error message with the location of the transform source files
+                logger = logging.getLogger(__name__)
+                logger.error(
+                    f"Error during transformation. Transform files can be found at: {dest_dir}"
+                )
+
+                # Re-raise the exception
+                raise
 
     async def get_transform_status(self, request_id: str) -> TransformStatus:
         # Retrieve the TransformStatus from the store using the request ID

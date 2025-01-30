@@ -5,48 +5,62 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List
 
+from .logging_decorator import log_to_file
 
-def run_command_with_logging(command: List[str]) -> None:
+
+def run_command_with_logging(command: List[str], log_file: Path) -> None:
     """Run a command in a subprocess and log the output.
 
     Args:
         command (List[str]): The command to run
+        log_file (Path): The file to write log messages to
 
     Raises:
         RuntimeError: If the command fails
     """
-    logger = logging.getLogger(__name__)
-    process = subprocess.Popen(
-        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
-    )
 
-    stdout_lines = []
-
-    assert process.stdout is not None
-
-    for stdout_line in iter(process.stdout.readline, ""):
-        stripped_line = stdout_line.strip()
-        stdout_lines.append(stripped_line)
-        if "error" in stripped_line.lower() or "warning" in stripped_line.lower():
-            logger.warning(stripped_line)
-        else:
-            logger.debug(stripped_line)
-
-    process.stdout.close()
-    return_code = process.wait()
-
-    if return_code != 0:
-        # Output the log as info
+    @log_to_file(log_file)
+    def do_the_work():
         logger = logging.getLogger(__name__)
-        for line in stdout_lines:
-            logger.info(line)
-
-        # TODO: Once we are done with 3.11, get rid of newline. Problem is
-        #       we can't have a \n in an f-string for the older versions of python.
-        raise RuntimeError(
-            f"Failed to run SX science payload locally with exit_code={return_code} "
-            "({' '.join(command)}). See INFO python logging messages for more details"
+        logger.debug("Running command: %s", " ".join(command))
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
         )
+
+        stdout_lines = []
+
+        assert process.stdout is not None
+
+        for stdout_line in iter(process.stdout.readline, ""):
+            stripped_line = stdout_line.strip()
+            stdout_lines.append(stripped_line)
+            if "error" in stripped_line.lower():
+                logger.error(stripped_line)
+            elif "warning" in stripped_line.lower():
+                logger.warning(stripped_line)
+            else:
+                logger.debug(stripped_line)
+
+        process.stdout.close()
+        return_code = process.wait()
+
+        if return_code != 0:
+            # Output the log as info
+            for line in stdout_lines:
+                logger.info(line)
+
+            # TODO: Once we are done with 3.11, get rid of newline. Problem is
+            #       we can't have a \n in an f-string for the older versions of python.
+            raise RuntimeError(
+                f"Failed to run SX science payload locally with exit_code={return_code} "
+                "({' '.join(command)}). See INFO python logging messages for more details"
+            )
+
+    do_the_work()
 
 
 class BaseScienceImage(ABC):
@@ -197,7 +211,9 @@ exit $r
 
             # Call the WSL command via os.system
             command = ["wsl", "-d", self._container, "bash", "-i", wsl_script_path]
-            run_command_with_logging(command)
+            run_command_with_logging(
+                command, log_file=generated_files_dir / "wsl_log.txt"
+            )
             output_paths.append(output_directory / input_path_name)
 
         return output_paths
@@ -315,7 +331,9 @@ sys.exit(exit_code)
                     f"/servicex/output/{output_name}",
                     output_format,
                 ]
-                run_command_with_logging(command)
+                run_command_with_logging(
+                    command, log_file=generated_files_dir / "docker_log.txt"
+                )
                 output_paths.append(output_directory / Path(input_file).name)
 
             except subprocess.CalledProcessError as e:

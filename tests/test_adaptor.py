@@ -23,9 +23,10 @@ from servicex_local import (
 from servicex_local.adaptor import MinioLocalAdaptor
 
 
-@pytest.mark.skip(reason="This test needs wsl2 to be installed")
-def test_adaptor_xaod_wsl2():
+def test_adaptor_xaod_wsl2(request):
     "Run a test with the WSL2 acting as the science image"
+    if not request.config.getoption("--wsl2"):
+        pytest.skip("Use the --wsl2 pytest flag to run this test")
 
     # Dummy out the cache manager so no results are cached.
 
@@ -78,9 +79,11 @@ def test_adaptor_xaod_wsl2():
     assert Path(local_files[0]).exists()
 
 
-@pytest.mark.skip(reason="This test needs docker to be installed")
-def test_adaptor_xaod_docker():
+def test_adaptor_xaod_docker(request):
     "Use docker as back end to make sure our scripts are portable!"
+    if not request.config.getoption("--docker"):
+        pytest.skip("Use the --wsl2 pytest flag to run this test")
+
     # Here starts the test code
     codegen = LocalXAODCodegen()
     science_runner = DockerScienceImage(
@@ -142,7 +145,9 @@ def test_adaptor_url():
 
 
 @pytest.mark.asyncio
-async def test_submit_transform_one_file(science_runner_one_txt_file: MagicMock):
+async def test_adaptor_submit_transform_one_file(
+    science_runner_one_txt_file: MagicMock,
+):
     # Create mock objects for code generator and science image
     mock_codegen = MagicMock()
 
@@ -210,6 +215,39 @@ def code_gen_one_windows_file() -> MagicMock:
 
 
 @pytest.fixture()
+def code_gen_one_file() -> MagicMock:
+    "return a code generator mock that will write a regular source file"
+
+    def generate_files(query: str, directory: Path):
+        f = directory / "run_me.sh"
+        with f.open("w") as h:
+            h.writelines(["hi", "there"])
+        return f
+
+    code_generator = MagicMock()
+    code_generator.gen_code = generate_files
+
+    return code_generator
+
+
+@pytest.fixture()
+def code_gen_error() -> MagicMock:
+    "Fail while writing a code-gen, and make sure that the file is actually written out."
+
+    def generate_files(query: str, directory: Path):
+        f = directory / "run_me.sh"
+        with f.open("w") as h:
+            h.writelines(["hi", "there"])
+
+        raise RuntimeError("This is a code generator error")
+
+    code_generator = MagicMock()
+    code_generator.gen_code = generate_files
+
+    return code_generator
+
+
+@pytest.fixture()
 def science_runner_one_txt_file() -> MagicMock:
     mock_science_runner = MagicMock()
 
@@ -235,7 +273,7 @@ def science_runner_one_txt_file() -> MagicMock:
 
 
 @pytest.mark.asyncio
-async def test_submit_transform_line_endings(
+async def test_adaptor_submit_transform_line_endings(
     code_gen_one_windows_file, science_runner_one_txt_file
 ):
     """Write a source .sh file that has Windows line endings and check in the
@@ -268,6 +306,89 @@ async def test_submit_transform_line_endings(
     assert transform_status.files == 1
 
 
+@pytest.mark.asyncio
+async def test_adaptor_saved_code_on_no_error(
+    code_gen_one_file, science_runner_one_txt_file, caplog
+):
+    "By default make sure code is not saved even with error"
+
+    # Create the SXLocalAdaptor with the mock objects
+    adaptor = SXLocalAdaptor(
+        code_gen_one_file,
+        science_runner_one_txt_file,
+        "mock_codegen",
+        "http://localhost:5000",
+    )
+
+    # Create a TransformRequest
+    transform_request = TransformRequest(
+        **{
+            "selection": "dummy_selection",
+            "file-list": ["input_file.root"],
+            "result_format": ResultFormat.root_ttree,
+            "result_destination": ResultDestination.volume,
+            "codegen": "dummy",
+        }
+    )
+
+    # Capture the log output
+    with caplog.at_level(logging.ERROR):
+        await adaptor.submit_transform(transform_request)
+
+    # Make sure nothing was written out.
+    log_messages = caplog.text
+    assert not any(
+        "Error during transformation" in msg for msg in log_messages
+    ), "Unexpected error message found in logs"
+
+
+@pytest.mark.asyncio
+async def test_adaptor_saved_code_on_error(
+    code_gen_error, science_runner_one_txt_file, caplog
+):
+    "By default make sure code is not saved even with error"
+
+    # Create the SXLocalAdaptor with the mock objects
+    adaptor = SXLocalAdaptor(
+        code_gen_error,
+        science_runner_one_txt_file,
+        "mock_codegen",
+        "http://localhost:5000",
+    )
+
+    # Create a TransformRequest
+    transform_request = TransformRequest(
+        **{
+            "selection": "dummy_selection",
+            "file-list": ["input_file.root"],
+            "result_format": ResultFormat.root_ttree,
+            "result_destination": ResultDestination.volume,
+            "codegen": "dummy",
+        }
+    )
+
+    # Capture the log output
+    with pytest.raises(RuntimeError):
+        with caplog.at_level(logging.ERROR):
+            await adaptor.submit_transform(transform_request)
+
+    # Extract the directory from the log error message
+    log_messages = caplog.text
+    error_message = next(
+        (
+            msg
+            for msg in log_messages.splitlines()
+            if "Error during transformation" in msg
+        ),
+        None,
+    )
+    assert error_message is not None, "Expected error message not found in logs"
+    directory_path = error_message.split("found at: ")[1].strip()
+    d = Path(directory_path)
+    assert d.exists()
+    assert (d / "run_me.sh").exists()
+
+
 def create_transform_status(request_id: str) -> TransformStatus:
     return TransformStatus(
         **{
@@ -293,7 +414,7 @@ def create_transform_status(request_id: str) -> TransformStatus:
 
 
 @pytest.mark.asyncio
-async def test_list_bucket():
+async def test_minio_list_bucket():
 
     # Create a MinioLocalAdaptor instance
     transform_status = create_transform_status("test_request_id")
@@ -315,7 +436,7 @@ async def test_list_bucket():
 
 
 @pytest.mark.asyncio
-async def test_download_file():
+async def test_minio_download_file():
     # Create a MinioLocalAdaptor instance
     transform_status = create_transform_status("test_request_id")
     adaptor = MinioLocalAdaptor.for_transform(transform_status)
@@ -334,7 +455,7 @@ async def test_download_file():
 
 
 @pytest.mark.asyncio
-async def test_get_signed_url():
+async def test_minio_get_signed_url():
     # Create a MinioLocalAdaptor instance
     transform_status = create_transform_status("test_request_id")
     adaptor = MinioLocalAdaptor.for_transform(transform_status)
