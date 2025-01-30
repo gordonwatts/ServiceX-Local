@@ -1,6 +1,5 @@
 import logging
 from functools import wraps
-from pathlib import Path
 
 
 def log_to_file(log_file):
@@ -9,7 +8,7 @@ def log_to_file(log_file):
         def wrapper(*args, **kwargs):
             logger = logging.getLogger()
             logger.setLevel(logging.DEBUG)
-            handler = logging.FileHandler(log_file, mode='a')  # Append mode
+            handler = logging.FileHandler(log_file, mode="a")  # Append mode
             formatter = logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             )
