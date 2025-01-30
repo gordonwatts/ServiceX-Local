@@ -246,6 +246,10 @@ def test_docker_science_log_warnings(tmp_path, caplog, request):
     assert "this is log line 2" in caplog.text
     assert "this is log line 1" in caplog.text
 
+    # Make sure these lines also appear in the logger output!
+    written_log = (generated_file_directory / "docker_log.txt").read_text()
+    assert "this is log line 2" in written_log
+
 
 @pytest.mark.parametrize(
     "wsl_distro, release, transform_path, exception_message",
