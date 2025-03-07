@@ -57,7 +57,7 @@ def run_command_with_logging(command: List[str], log_file: Path) -> None:
             #       we can't have a \n in an f-string for the older versions of python.
             raise RuntimeError(
                 f"Failed to run SX science payload locally with exit_code={return_code} "
-                "({' '.join(command)}). See INFO python logging messages for more details"
+                f"({' '.join(command)}). See INFO python logging messages for more details"
             )
 
     do_the_work()
@@ -284,7 +284,17 @@ class DockerScienceImage(BaseScienceImage):
 
             # Create the file that will actually do the work. We need to look at the transformer
             # capabilities json file to figure it out.
-            file_runner = """#!/bin/python
+            file_runner = """#!/bin/bash
+python_cmd=$(command -v python3 || command -v python)
+exec $python_cmd /generated/kick_off.py $@
+"""
+            with open(generated_files_dir / "file_runner.sh", "w", newline="\n") as f:
+                for ln in file_runner.splitlines():
+                    f.write(ln.strip() + "\n")
+
+            # Create the file that will actually do the work. We need to look at the transformer
+            # capabilities json file to figure it out.
+            kick_off = """
 import json
 import os
 import sys
@@ -300,7 +310,8 @@ arg1 = sys.argv[1]
 arg2 = sys.argv[2]
 arg3 = sys.argv[3]
 if info["language"] == "python":
-    ret_code = os.system("python " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
+    exe = sys.executable
+    ret_code = os.system(exe + " " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
 elif info["language"] == "bash":
     ret_code = os.system("bash " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
 else:
@@ -309,7 +320,7 @@ exit_code = ret_code >> 8
 sys.exit(exit_code)
 """
             with open(generated_files_dir / "kick_off.py", "w") as f:
-                f.write(file_runner)
+                f.write(kick_off)
 
             try:
                 command = [
@@ -325,8 +336,8 @@ sys.exit(exit_code)
                     *x509up_volume,
                     *input_volume,
                     self.image_name,
-                    "python",
-                    "/generated/kick_off.py",
+                    "bash",
+                    "/generated/file_runner.sh",
                     container_path,
                     f"/servicex/output/{output_name}",
                     output_format,
