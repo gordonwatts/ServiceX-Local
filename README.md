@@ -30,9 +30,25 @@ This text is a **DRAFT**
 To use this, example code is as follows:
 
 ```python
-    codegen = LocalXAOD()
-    science_runner = ScienceWSL2("atlas_al9", "22.2.107")
-    adaptor = SXLocalAdaptor(codegen, science_runner)
+    codegen = LocalXAODCodegen()
+    science_runner = WSL2ScienceImage("atlas_al9", "25.2.12")
+    adaptor = SXLocalAdaptor(
+        codegen, science_runner, "atlasr22", "http://localhost:5001"
+    )
+
+    from servicex.configuration import Configuration, Endpoint
+
+    Configuration.register_endpoint(
+        Endpoint(
+            name="test-backend",
+            adapter=adaptor,
+            minio=MinioLocalAdaptor.for_transform,
+            # TODO: Endpoint is still required, even though not used.
+            endpoint="bogus",
+        )
+    )
+
+    logging.basicConfig(level=logging.DEBUG)
 
     # The simple query, take straight from the example in the documentation.
     query = q.FuncADL_ATLASr22()  # type: ignore
@@ -50,15 +66,19 @@ To use this, example code is as follows:
                 "Name": "func_adl_xAOD_simple",
                 "Dataset": dataset.FileList(
                     [
-                        "tests/test.root",  # noqa: E501
+                        "root://eospublic.cern.ch//eos/opendata/atlas/rucio/mc20_13TeV/"
+                        "DAOD_PHYSLITE.37622528._000013.pool.root.1"
                     ]
                 ),
                 "Query": jet_info_per_event,
+                "IgnoreLocalCache": True,
             }
         ]
     }
-    files = deliver(spec, servicex_name="servicex-uc-af", sx_adaptor=adaptor)
-    assert files is not None, "No files returned from deliver! Internal error"
+    files = deliver(
+        spec,
+        servicex_name="test-backend",
+    )
 ```
 
 ### Running tests
