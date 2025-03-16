@@ -1,14 +1,14 @@
 import hashlib
-import os
 import json
 import tempfile
 from typing import Any, Generator, List
 from pathlib import Path
+from datetime import datetime
 
 from make_it_sync import make_sync
 from servicex import General, ResultDestination, Sample, ServiceXSpec
-from servicex.models import ResultFormat, TransformRequest
-from servicex.query_core import Query, QueryStringGenerator
+from servicex.models import ResultFormat, TransformRequest, TransformStatus
+from servicex.query_core import QueryStringGenerator
 from servicex.servicex_client import GuardList
 from servicex_local import SXLocalAdaptor
 from servicex_local.adaptor import MinioLocalAdaptor
@@ -70,12 +70,12 @@ CACHE_DIR = Path(tempfile.gettempdir()) / "servicex"
 CACHE_FILE = CACHE_DIR / "cache.json"
 
 
-def _load_cache() -> dict[str, str]:
+def _load_cache() -> dict[str, Any]:
     """
     Load the cache from the file system.
 
     Returns:
-        dict[str, str]: The cache dictionary.
+        dict[str, Any]: The cache dictionary.
     """
     if not CACHE_FILE.exists():
         return {}
@@ -83,12 +83,12 @@ def _load_cache() -> dict[str, str]:
         return json.load(f)
 
 
-def _save_cache(cache: dict[str, str]) -> None:
+def _save_cache(cache: dict[str, Any]) -> None:
     """
     Save the cache to the file system.
 
     Args:
-        cache (dict[str, str]): The cache dictionary.
+        cache (dict[str, Any]): The cache dictionary.
     """
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     with CACHE_FILE.open("w") as f:
@@ -110,14 +110,33 @@ async def deliver_async(
         cache_key = _generate_cache_key(tq)
 
         if cache_key in cache and not ignore_local_cache:
-            request_id = cache[cache_key]
+            info = cache[cache_key]
+            info["submit_time"] = datetime.fromisoformat(info["submit_time"])
+            info["finish_time"] = (
+                datetime.fromisoformat(info["finish_time"])
+                if info["finish_time"] is not None
+                else None
+            )
+            info = {
+                k.replace("_", "-") if k != "request_id" else k: v
+                for k, v in info.items()
+            }
+
+            status = TransformStatus(**info)
         else:
             # Do the transform and get status
             request_id = await adaptor.submit_transform(tq)
-            cache[cache_key] = request_id
-            _save_cache(cache)  # Save cache to file system
+            status = await adaptor.get_transform_status(request_id)
+            info = status.model_dump()
+            info["submit_time"] = info["submit_time"].isoformat()
+            info["finish_time"] = (
+                info["finish_time"].isoformat()
+                if info["finish_time"] is not None
+                else None
+            )
 
-        status = await adaptor.get_transform_status(request_id)
+            cache[cache_key] = info
+            _save_cache(cache)  # Save cache to file system
 
         # Build the list of results.
         minio_results = MinioLocalAdaptor.for_transform(status)
