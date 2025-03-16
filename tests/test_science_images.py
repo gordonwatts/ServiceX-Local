@@ -61,6 +61,11 @@ def prepare_input_files(
             "sslhep/servicex_func_adl_xaod_transformer:21.2.231",
         ),
         (
+            "./tests/genfiles_raw/query1_python",
+            ["file1.root"],
+            "sslhep/servicex_func_adl_xaod_transformer:25.2.41",
+        ),
+        (
             "./tests/genfiles_raw/query2_bash",
             ["file1.root", "file2.root"],
             "sslhep/servicex_func_adl_uproot_transformer:uproot5",
