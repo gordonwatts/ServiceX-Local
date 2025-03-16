@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from servicex import General, ResultDestination, Sample, ServiceXSpec, dataset
 from servicex.models import ResultFormat, Status, TransformRequest, TransformStatus
+from servicex.query_core import QueryStringGenerator
 
 from servicex_local import deliver
 
@@ -46,6 +47,8 @@ def simple_adaptor():
 
         async def submit_transform(self, tq: TransformRequest) -> str:
             self._request_id = str(uuid.uuid4())
+
+            assert tq.selection == "query1"
 
             file_path = (
                 Path(tempfile.gettempdir())
@@ -93,6 +96,34 @@ def test_deliver_spec_simple(simple_adaptor):
         Sample=[
             Sample(
                 Name="test_me", Dataset=dataset.FileList("test.root"), Query="query1"
+            )
+        ],
+    )
+
+    r = deliver(spec, adaptor=simple_adaptor)
+    assert r is not None
+    assert len(r) == 1
+    assert "test_me" in r
+    files = r["test_me"]
+    assert len(files) == 1
+    local_path = Path(files[0].replace("file:///", ""))
+    assert os.path.exists(local_path)
+
+
+def test_deliver_spec_q_string_generator(simple_adaptor):
+    "Test a simple deliver that should work"
+
+    class my_string_query(QueryStringGenerator):
+        def generate_selection_string(self) -> str:
+            return "query1"
+
+    spec = ServiceXSpec(
+        General=General(),
+        Sample=[
+            Sample(
+                Name="test_me",
+                Dataset=dataset.FileList("test.root"),
+                Query=my_string_query(),
             )
         ],
     )

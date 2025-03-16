@@ -8,6 +8,7 @@ from pathlib import Path
 from make_it_sync import make_sync
 from servicex import General, ResultDestination, Sample, ServiceXSpec
 from servicex.models import ResultFormat, TransformRequest
+from servicex.query_core import Query, QueryStringGenerator
 from servicex.servicex_client import GuardList
 from servicex_local import SXLocalAdaptor
 from servicex_local.adaptor import MinioLocalAdaptor
@@ -26,11 +27,23 @@ def _sample_run_info(
         TransformRequest: A TransformRequest object for each sample in the list.
     """
     for s in samples:
+        selection = (
+            s.Query
+            if isinstance(s.Query, str)
+            else (
+                s.Query.generate_selection_string()
+                if isinstance(s.Query, QueryStringGenerator)
+                else None
+            )
+        )
+        assert (
+            selection is not None
+        ), f"Unable to translate query {s.Query} into a string"
 
         tq = TransformRequest(
             title=s.Name,
             codegen="local-codegen",
-            selection=str(s.Query),
+            selection=selection,
             result_destination=ResultDestination.object_store,
             result_format=ResultFormat.root_ttree,
         )
