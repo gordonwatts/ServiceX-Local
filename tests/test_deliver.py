@@ -1,12 +1,10 @@
 from datetime import datetime
 import tempfile
-from unittest.mock import MagicMock
 
-from _pytest.compat import LEGACY_PATH
 import pytest
 from servicex import General, ResultDestination, Sample, ServiceXSpec, dataset
 from servicex.models import ResultFormat, Status, TransformRequest, TransformStatus
-from servicex_local import deliver, SXLocalAdaptor
+from servicex_local import deliver
 import os
 from pathlib import Path
 import uuid
@@ -75,7 +73,7 @@ def test_deliver_spec_simple(simple_adaptor):
     assert "test_me" in r
     files = r["test_me"]
     assert len(files) == 1
-    local_path = Path(files[0].replace('file:///', ''))
+    local_path = Path(files[0].replace("file:///", ""))
     assert os.path.exists(local_path)
 
 
