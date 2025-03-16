@@ -24,6 +24,7 @@ def restore_cache():
     if cache_file.exists():
         with cache_file.open("r") as f:
             original_cache = f.read()
+        cache_file.unlink()
 
     yield
 
