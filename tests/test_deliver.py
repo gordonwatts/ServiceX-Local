@@ -107,7 +107,9 @@ def test_deliver_spec_simple(simple_adaptor):
     assert "test_me" in r
     files = r["test_me"]
     assert len(files) == 1
-    local_path = Path(files[0].replace("file:///", ""))
+    local_path = Path(files[0].replace("file:///", "/"))
+    if os.name == "nt":
+        local_path = Path(files[0].replace("file:///", ""))
     assert os.path.exists(local_path)
 
 
@@ -135,7 +137,9 @@ def test_deliver_spec_q_string_generator(simple_adaptor):
     assert "test_me" in r
     files = r["test_me"]
     assert len(files) == 1
-    local_path = Path(files[0].replace("file:///", ""))
+    local_path = Path(files[0].replace("file:///", "/"))
+    if os.name == "nt":
+        local_path = Path(files[0].replace("file:///", ""))
     assert os.path.exists(local_path)
 
 
