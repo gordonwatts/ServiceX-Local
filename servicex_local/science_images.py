@@ -3,7 +3,7 @@ import os
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from .logging_decorator import log_to_file
 
@@ -35,15 +35,27 @@ def run_command_with_logging(command: List[str], log_file: Path) -> None:
 
         assert process.stdout is not None
 
+        emit_next_line_level: Optional[int] = None
         for stdout_line in iter(process.stdout.readline, ""):
             stripped_line = stdout_line.strip()
             stdout_lines.append(stripped_line)
-            if "error" in stripped_line.lower():
+            emitted_level: Optional[int] = None
+            if (emit_next_line_level == logging.ERROR) or (
+                "error" in stripped_line.lower()
+            ):
                 logger.error(stripped_line)
-            elif "warning" in stripped_line.lower():
+                emitted_level = logging.ERROR
+            elif (emit_next_line_level == logging.WARNING) or (
+                "warning" in stripped_line.lower()
+            ):
                 logger.warning(stripped_line)
+                emitted_level = logging.WARNING
             else:
                 logger.debug(stripped_line)
+
+            emit_next_line_level = None
+            if stripped_line.endswith(":"):
+                emit_next_line_level = emitted_level
 
         process.stdout.close()
         return_code = process.wait()
