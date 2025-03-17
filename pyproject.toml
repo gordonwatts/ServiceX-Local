@@ -4,7 +4,6 @@ build-backend = "hatchling.build"
 
 [project]
 name = "servicex-local"
-version = "0.0.1"
 description = "Enables a local backend for ServiceX"
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
@@ -33,14 +32,19 @@ dependencies = [
     "click",
     "make-it-sync",
 ]
+dynamic = ["version"]
 
 [project.urls]
+
 # Documentation = "https://servicex.readthedocs.io/"
-# Homepage = "https://github.com/ssl-hep/ServiceX_frontend"
-# "Issue Tracker" = "https://github.com/ssl-hep/ServiceX_frontend/issues"
-# "Release Notes" = "https://github.com/ssl-hep/ServiceX_frontend/releases"
-# "Releases" = "https://github.com/ssl-hep/ServiceX_frontend/releases"
-# "Source Code" = "https://github.com/ssl-hep/ServiceX_frontend"
+"Homepage" = "https://github.com/gordonwatts/ServiceX-Local"
+"Issue Tracker" = "https://github.com/gordonwatts/ServiceX-Local/issues"
+"Release Notes" = "https://github.com/gordonwatts/ServiceX-Local/releases"
+"Releases" = "https://github.com/gordonwatts/ServiceX-Local/releases"
+"Source Code" = "https://github.com/gordonwatts/ServiceX-Local"
+
+[tool.hatch.version]
+path = "servicex_local/version.txt"
 
 [project.optional-dependencies]
 
