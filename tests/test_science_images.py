@@ -166,6 +166,18 @@ def test_docker_science(
             "24.2.41",
             "atlas_al9",
         ),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["http://root.ch/file1.root"],
+            "24.2.41",
+            "atlas_al9",
+        ),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["https://root.ch/file1.root"],
+            "24.2.41",
+            "atlas_al9",
+        ),
     ],
 )
 def test_wsl2_science(
