@@ -155,7 +155,11 @@ class WSL2ScienceImage(BaseScienceImage):
 
         for input_file in input_files:
             # Check if input_file is a root:// or http:// path
-            if input_file.startswith("root://") or input_file.startswith("http://"):
+            if (
+                input_file.startswith("root://")
+                or input_file.startswith("http://")
+                or input_file.startswith("https://")
+            ):
                 wsl_input_file = input_file
                 input_path_name = Path(input_file.split("/")[-1]).name
             else:
@@ -281,7 +285,11 @@ class DockerScienceImage(BaseScienceImage):
             output_name = Path(input_file).name
 
             # Create docker mapping string for the input file if it exists.
-            if input_file.startswith("root://") or input_file.startswith("http://"):
+            if (
+                input_file.startswith("root://")
+                or input_file.startswith("http://")
+                or input_file.startswith("https://")
+            ):
                 input_volume = []
                 container_path = input_file
             else:

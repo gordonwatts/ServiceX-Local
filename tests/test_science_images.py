@@ -28,7 +28,11 @@ def prepare_input_files(
     input_data_directory.mkdir()
     actual_input_files = []
     for file in input_files:
-        if not file.startswith("root://"):
+        if (
+            not file.startswith("root://")
+            and not file.startswith("https://")
+            and not file.startswith("http://")
+        ):
             (input_data_directory / file).touch()
             actual_input_files.append(str(input_data_directory / file))
         else:
@@ -68,6 +72,16 @@ def prepare_input_files(
         (
             "./tests/genfiles_raw/query2_bash",
             ["file1.root", "file2.root"],
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5",
+        ),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["http://root.ch/file1"],
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5",
+        ),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["https://root.ch/file1"],
             "sslhep/servicex_func_adl_uproot_transformer:uproot5",
         ),
         (
@@ -149,6 +163,18 @@ def test_docker_science(
                 "root://fax.mwt2.org:1094//pnfs/uchicago.edu/atlaslocalgroupdisk/"
                 "rucio/user.mgeyik/e7/ee/user.mgeyik.30182995._000093.out.root"
             ],
+            "24.2.41",
+            "atlas_al9",
+        ),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["http://root.ch/file1.root"],
+            "24.2.41",
+            "atlas_al9",
+        ),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["https://root.ch/file1.root"],
             "24.2.41",
             "atlas_al9",
         ),
