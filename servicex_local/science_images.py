@@ -281,7 +281,11 @@ class DockerScienceImage(BaseScienceImage):
             output_name = Path(input_file).name
 
             # Create docker mapping string for the input file if it exists.
-            if input_file.startswith("root://") or input_file.startswith("http://"):
+            if (
+                input_file.startswith("root://")
+                or input_file.startswith("http://")
+                or input_file.startswith("https://")
+            ):
                 input_volume = []
                 container_path = input_file
             else:

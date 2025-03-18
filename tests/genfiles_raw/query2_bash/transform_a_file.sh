@@ -15,7 +15,7 @@ output_format=$3
 echo "Output format: $output_format"
 
 # Check if the input file exists
-if [[ "$input_file" != root* ]]; then
+if [[ "$input_file" != root* && "$input_file" != http* ]]; then
     if [ ! -f "$input_file" ]; then
         echo "Input file not found!"
         echo "-->   $input_file"
