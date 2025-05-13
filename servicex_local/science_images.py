@@ -7,7 +7,6 @@ from typing import List, Optional
 
 from .logging_decorator import log_to_file
 
-
 def run_command_with_logging(command: List[str], log_file: Path) -> None:
     """Run a command in a subprocess and log the output.
 
@@ -370,6 +369,133 @@ sys.exit(exit_code)
             except subprocess.CalledProcessError as e:
                 raise RuntimeError(
                     f"Failed to start docker container for {input_file}: "
+                    f"{e.stderr.decode('utf-8')}"
+                )
+
+        output_files = list(output_directory.glob("*"))
+        if len(output_files) != len(input_files):
+            raise RuntimeError(
+                f"Number of output files ({len(output_files)}) does not match number of "
+                f"input files ({len(input_files)})"
+            )
+
+        return output_files
+
+
+class SingularityScienceImage(BaseScienceImage):
+    def __init__(self, image_uri: str):
+        """Science image will run in a Singularity container with the specified image URI
+
+        Args:
+            image_uri (str): The path/URI of the Singularity image
+        """
+        self.image_uri = image_uri
+
+    def transform(
+        self,
+        generated_files_dir: Path,
+        input_files: List[str],
+        output_directory: Path,
+        output_format: str,
+    ) -> List[Path]:
+        """Transform the input files and return the path to the output file.
+
+        This method works by invoking the container with a specific transformation command.
+
+        Args:
+            generated_files_dir (str): Directory for generated files
+            input_files (List[str]): List of input files
+            output_directory (Path): The output directory
+            output_format (str): The desired output format
+
+        Returns:
+            List[Path]: List of output file paths
+        """
+
+        output_paths = []
+        x509up_path = Path(os.getenv("TEMP", "/tmp")) / "x509up"
+        if x509up_path.exists():
+            x509up_volume = ["--bind", f"{x509up_path}:/tmp/grid-security/x509up"]
+        else:
+            logger = logging.getLogger(__name__)
+            logger.warning("x509up certificate not found at /tmp/x509up")
+            x509up_volume = []
+
+        for input_file in input_files:
+            safe_image = self.image_uri.replace(":", "_").replace("/", "_")
+            container_name = f"sx_codegen_container_{safe_image}_{Path(input_file).stem}"
+
+            output_name = Path(input_file).name
+
+            if input_file.startswith(("root://", "http://", "https://")):
+                input_volume = []
+                container_path = input_file
+            else:
+                input_path = Path(input_file)
+                if not input_path.exists():
+                    raise FileNotFoundError(
+                        f"Input file for Singularity image {input_file} not found."
+                    )
+                input_volume = ["--bind", f"{str(input_path.absolute())}:/input_file.root"]
+                container_path = "/input_file.root"
+
+            file_runner = """#!/bin/bash
+python_cmd=$(command -v python3 || command -v python)
+exec $python_cmd /generated/kick_off.py $@
+"""
+            with open(generated_files_dir / "file_runner.sh", "w", newline="\n") as f:
+                for ln in file_runner.splitlines():
+                    f.write(ln.strip() + "\n")
+
+            kick_off = """
+import json
+import os
+import sys
+
+x509up_path = "/tmp/grid-security/x509up"
+if os.path.exists(x509up_path):
+    os.chmod(x509up_path, 0o600)
+
+with open("/generated/transformer_capabilities.json") as f:
+    info = json.load(f)
+file_to_run = info["command"]
+arg1 = sys.argv[1]
+arg2 = sys.argv[2]
+arg3 = sys.argv[3]
+if info["language"] == "python":
+    exe = sys.executable
+    ret_code = os.system(exe + " " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
+elif info["language"] == "bash":
+    ret_code = os.system("bash " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
+else:
+    raise ValueError("Unsupported language: " + info["language"])
+exit_code = ret_code >> 8
+sys.exit(exit_code)
+"""
+            with open(generated_files_dir / "kick_off.py", "w") as f:
+                f.write(kick_off)
+
+            try:
+                command = [
+                    "singularity",
+                    "exec",
+                    *x509up_volume,
+                    *input_volume,
+                    "--bind", f"{generated_files_dir.absolute()}:/generated",
+                    "--bind", f"{output_directory}:/servicex/output",
+                    self.image_uri,
+                    "bash",
+                    "/generated/file_runner.sh",
+                    container_path,
+                    f"/servicex/output/{output_name}",
+                    output_format,
+                ]
+                run_command_with_logging(command, log_file=generated_files_dir / "singularity_log.txt")
+                output_paths.append(output_directory / Path(input_file).name)
+
+            except subprocess.CalledProcessError as e:
+                raise RuntimeError(
+                    f"Failed to start Singularity container for {input_file}: "
                     f"{e.stderr.decode('utf-8')}"
                 )
 
