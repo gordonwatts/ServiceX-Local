@@ -356,6 +356,7 @@ def test_docker_command_memory_limit(tmp_path: Path):
     assert captured_command["command"][0] == "docker"
     assert "1.5g" in captured_command["command"]
     assert "-m" in captured_command["command"]
+    assert "--memory-swap" in captured_command["command"]
 
 
 @pytest.mark.parametrize(

@@ -345,7 +345,14 @@ sys.exit(exit_code)
                 f.write(kick_off)
 
             memory_options = (
-                ["-m", f"{self.memory_limit}g"] if self.memory_limit else []
+                [
+                    "-m",
+                    f"{self.memory_limit}g",
+                    "--memory-swap",
+                    f"{self.memory_limit}g",
+                ]
+                if self.memory_limit
+                else []
             )
 
             try:
