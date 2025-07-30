@@ -475,29 +475,36 @@ sys.exit(exit_code)
             with open(generated_files_dir / "kick_off.py", "w") as f:
                 f.write(kick_off)
 
-            try:
-                command = [
-                    "singularity",
-                    "exec",
-                    *x509up_volume,
-                    *input_volume,
-                    "--bind", f"{generated_files_dir.absolute()}:/generated",
-                    "--bind", f"{output_directory}:/servicex/output",
-                    self.image_uri,
-                    "bash",
-                    "/generated/file_runner.sh",
-                    container_path,
-                    f"/servicex/output/{output_name}",
-                    output_format,
-                ]
-                run_command_with_logging(command, log_file=generated_files_dir / "singularity_log.txt")
-                output_paths.append(output_directory / Path(input_file).name)
+            import tempfile
 
-            except subprocess.CalledProcessError as e:
-                raise RuntimeError(
-                    f"Failed to start Singularity container for {input_file}: "
-                    f"{e.stderr.decode('utf-8')}"
-                )
+            with tempfile.TemporaryDirectory() as temp_dir:
+
+                print(f"Temporary directory created at: {temp_dir}")
+
+                try:
+                    command = [
+                        "singularity",
+                        "exec",
+                        *x509up_volume,
+                        *input_volume,
+                        "--bind", f"{generated_files_dir.absolute()}:/generated",
+                        "--bind", f"{output_directory}:/servicex/output",
+                        "--pwd", str(temp_dir),
+                        self.image_uri,
+                        "bash",
+                        "/generated/file_runner.sh",
+                        container_path,
+                        f"/servicex/output/{output_name}",
+                        output_format,
+                    ]
+                    run_command_with_logging(command, log_file=generated_files_dir / "singularity_log.txt")
+                    output_paths.append(output_directory / Path(input_file).name)
+
+                except subprocess.CalledProcessError as e:
+                    raise RuntimeError(
+                        f"Failed to start Singularity container for {input_file}: "
+                        f"{e.stderr.decode('utf-8')}"
+                    )
 
         output_files = list(output_directory.glob("*"))
         if len(output_files) != len(input_files):
