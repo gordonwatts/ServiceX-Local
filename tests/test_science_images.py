@@ -6,7 +6,7 @@ from typing import List
 
 import pytest
 
-from servicex_local.science_images import DockerScienceImage, WSL2ScienceImage
+from servicex_local.science_images import DockerScienceImage, WSL2ScienceImage, SingularityScienceImage
 
 
 def prepare_input_files(
@@ -116,6 +116,135 @@ def test_docker_science(
 
     assert len(output_files) == len(actual_input_files)
     assert all(o.exists() for o in output_files)
+
+@pytest.mark.parametrize(
+    "source_directory, input_files, container_name",
+    [
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["file1.root"],
+            "docker://sslhep/servicex_func_adl_uproot_transformer:uproot5",
+        ),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["file1.root"],
+            "docker://sslhep/servicex_func_adl_xaod_transformer:21.2.231",
+        ),
+        (
+            "./tests/genfiles_raw/query1_python",
+            ["file1.root"],
+            "docker://sslhep/servicex_func_adl_uproot_transformer:uproot5",
+        ),
+        (
+            "./tests/genfiles_raw/query1_python",
+            ["file1.root"],
+            "docker://sslhep/servicex_func_adl_xaod_transformer:21.2.231",
+        ),
+        (
+            "./tests/genfiles_raw/query1_python",
+            ["file1.root"],
+            "docker://sslhep/servicex_func_adl_xaod_transformer:25.2.41",
+        ),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["file1.root", "file2.root"],
+            "docker://sslhep/servicex_func_adl_uproot_transformer:uproot5",
+        ),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["http://root.ch/file1"],
+            "docker://sslhep/servicex_func_adl_uproot_transformer:uproot5",
+        ),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            ["https://root.ch/file1"],
+            "docker://sslhep/servicex_func_adl_uproot_transformer:uproot5",
+        ),
+        (
+            "./tests/genfiles_raw/query2_bash",
+            [
+                "root://fax.mwt2.org:1094//pnfs/uchicago.edu/atlaslocalgroupdisk/"
+                "rucio/user.mgeyik/e7/ee/user.mgeyik.30182995._000093.out.root"
+            ],
+            "docker://sslhep/servicex_func_adl_uproot_transformer:uproot5",
+        ),
+    ],
+)
+def test_singularity_science(
+    tmp_path, request, source_directory, input_files, container_name
+):
+    """Test against a docker science image - integrated (uses docker)
+    WARNING: This expects to find the x509 cert!!!
+    """
+    if not request.config.getoption("--singularity"):
+        pytest.skip("Use the --singularity pytest flag to run this test")
+
+    generated_file_directory, actual_input_files, output_file_directory = (
+        prepare_input_files(tmp_path, source_directory, input_files)
+    )
+
+    # Now we can run the science image
+    docker = SingularityScienceImage(container_name)
+    logging.basicConfig(level=logging.DEBUG)
+    output_files = docker.transform(
+        generated_file_directory, actual_input_files, output_file_directory, "root-file"
+    )
+
+    assert len(output_files) == len(actual_input_files)
+    assert all(o.exists() for o in output_files)
+
+def test_singularity_science_logging(tmp_path, caplog, request):
+    """Run a simple singularity transform and make sure we pick up log messages."""
+    if not request.config.getoption("--singularity"):
+        pytest.skip("Use the --singularity pytest flag to run this test")
+
+    generated_file_directory, actual_input_files, output_file_directory = (
+        prepare_input_files(
+            tmp_path, "tests/genfiles_raw/query6_logging", ["file1.root"]
+        )
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        docker = SingularityScienceImage(
+            "docker://sslhep/servicex_func_adl_uproot_transformer:uproot5"
+        )
+        docker.transform(
+            generated_file_directory,
+            actual_input_files,
+            output_file_directory,
+            "root-file",
+        )
+
+    assert "this is log line 2" in caplog.text
+
+def test_singularity_science_log_warnings(tmp_path, caplog, request):
+    """Run a simple docker transform and make sure we pick up warning or error log messages."""
+    #if not request.config.getoption("--singularity"):
+        #pytest.skip("Use the --singularity pytest flag to run this test")
+
+    generated_file_directory, actual_input_files, output_file_directory = (
+        prepare_input_files(
+            tmp_path, "tests/genfiles_raw/query7_logging_warnings", ["file1.root"]
+        )
+    )
+
+    with caplog.at_level(logging.WARNING):
+        docker = SingularityScienceImage(
+            "docker://sslhep/servicex_func_adl_uproot_transformer:uproot5"
+        )
+        docker.transform(
+            generated_file_directory,
+            actual_input_files,
+            output_file_directory,
+            "root-file",
+        )
+
+    assert "this is log line 2" in caplog.text
+    assert "this is log line 1" in caplog.text
+
+    # Make sure these lines also appear in the logger output!
+    written_log = (generated_file_directory / "singularity_log.txt").read_text()
+    assert "this is log line 2" in written_log
 
 
 @pytest.mark.parametrize(
