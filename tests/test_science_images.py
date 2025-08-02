@@ -173,7 +173,7 @@ def test_docker_science(
 def test_singularity_science(
     tmp_path, request, source_directory, input_files, container_name
 ):
-    """Test against a docker science image - integrated (uses docker)
+    """Test against a Singularity science image - integrated (uses Singularity)
     WARNING: This expects to find the x509 cert!!!
     """
     if not request.config.getoption("--singularity"):
