@@ -219,8 +219,8 @@ def test_singularity_science_logging(tmp_path, caplog, request):
 
 def test_singularity_science_log_warnings(tmp_path, caplog, request):
     """Run a simple singularity transform and make sure we pick up warning or error log messages."""
-    #if not request.config.getoption("--singularity"):
-        #pytest.skip("Use the --singularity pytest flag to run this test")
+    if not request.config.getoption("--singularity"):
+        pytest.skip("Use the --singularity pytest flag to run this test")
 
     generated_file_directory, actual_input_files, output_file_directory = (
         prepare_input_files(
