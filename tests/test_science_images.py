@@ -218,7 +218,7 @@ def test_singularity_science_logging(tmp_path, caplog, request):
     assert "this is log line 2" in caplog.text
 
 def test_singularity_science_log_warnings(tmp_path, caplog, request):
-    """Run a simple docker transform and make sure we pick up warning or error log messages."""
+    """Run a simple singularity transform and make sure we pick up warning or error log messages."""
     #if not request.config.getoption("--singularity"):
         #pytest.skip("Use the --singularity pytest flag to run this test")
 
