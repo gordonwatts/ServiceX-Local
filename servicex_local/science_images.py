@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from .logging_decorator import log_to_file
 
+
 def run_command_with_logging(command: List[str], log_file: Path) -> None:
     """Run a command in a subprocess and log the output.
 
@@ -423,7 +424,9 @@ class SingularityScienceImage(BaseScienceImage):
 
         for input_file in input_files:
             safe_image = self.image_uri.replace(":", "_").replace("/", "_")
-            container_name = f"sx_codegen_container_{safe_image}_{Path(input_file).stem}"
+            container_name = (
+                f"sx_codegen_container_{safe_image}_{Path(input_file).stem}"
+            )
 
             output_name = Path(input_file).name
 
@@ -436,7 +439,10 @@ class SingularityScienceImage(BaseScienceImage):
                     raise FileNotFoundError(
                         f"Input file for Singularity image {input_file} not found."
                     )
-                input_volume = ["--bind", f"{str(input_path.absolute())}:/input_file.root"]
+                input_volume = [
+                    "--bind",
+                    f"{str(input_path.absolute())}:/input_file.root",
+                ]
                 container_path = "/input_file.root"
 
             file_runner = """#!/bin/bash
@@ -487,9 +493,12 @@ sys.exit(exit_code)
                         "exec",
                         *x509up_volume,
                         *input_volume,
-                        "--bind", f"{generated_files_dir.absolute()}:/generated",
-                        "--bind", f"{output_directory}:/servicex/output",
-                        "--pwd", str(temp_dir),
+                        "--bind",
+                        f"{generated_files_dir.absolute()}:/generated",
+                        "--bind",
+                        f"{output_directory}:/servicex/output",
+                        "--pwd",
+                        str(temp_dir),
                         self.image_uri,
                         "bash",
                         "/generated/file_runner.sh",
@@ -497,7 +506,9 @@ sys.exit(exit_code)
                         f"/servicex/output/{output_name}",
                         output_format,
                     ]
-                    run_command_with_logging(command, log_file=generated_files_dir / "singularity_log.txt")
+                    run_command_with_logging(
+                        command, log_file=generated_files_dir / "singularity_log.txt"
+                    )
                     output_paths.append(output_directory / Path(input_file).name)
 
                 except subprocess.CalledProcessError as e:

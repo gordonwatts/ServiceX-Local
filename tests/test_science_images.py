@@ -6,7 +6,11 @@ from typing import List
 
 import pytest
 
-from servicex_local.science_images import DockerScienceImage, WSL2ScienceImage, SingularityScienceImage
+from servicex_local.science_images import (
+    DockerScienceImage,
+    WSL2ScienceImage,
+    SingularityScienceImage,
+)
 
 
 def prepare_input_files(
@@ -117,6 +121,7 @@ def test_docker_science(
     assert len(output_files) == len(actual_input_files)
     assert all(o.exists() for o in output_files)
 
+
 @pytest.mark.parametrize(
     "source_directory, input_files, container_name",
     [
@@ -193,6 +198,7 @@ def test_singularity_science(
     assert len(output_files) == len(actual_input_files)
     assert all(o.exists() for o in output_files)
 
+
 def test_singularity_science_logging(tmp_path, caplog, request):
     """Run a simple singularity transform and make sure we pick up log messages."""
     if not request.config.getoption("--singularity"):
@@ -216,6 +222,7 @@ def test_singularity_science_logging(tmp_path, caplog, request):
         )
 
     assert "this is log line 2" in caplog.text
+
 
 def test_singularity_science_log_warnings(tmp_path, caplog, request):
     """Run a simple singularity transform and make sure we pick up warning or error log messages."""
