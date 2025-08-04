@@ -319,10 +319,10 @@ def test_singularity_science_log_warnings(tmp_path, caplog, request):
 def test_wsl2_science(
     tmp_path, request, source_directory, input_files, release, wsl_distro
 ):
-    """Test against a docker science image - integrated (uses docker)
+    """Test against a wsl2 science image - integrated
     WARNING: This expects to find the x509 cert!!!
     """
-    if not request.config.getoption("--docker"):
+    if not request.config.getoption("--wsl2"):
         pytest.skip("Use the --wsl2 pytest flag to run this test")
 
     generated_file_directory, actual_input_files, output_file_directory = (
