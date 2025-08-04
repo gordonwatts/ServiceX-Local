@@ -186,7 +186,7 @@ def test_wsl2_science(
     """Test against a docker science image - integrated (uses docker)
     WARNING: This expects to find the x509 cert!!!
     """
-    if not request.config.getoption("--docker"):
+    if not request.config.getoption("--wsl2"):
         pytest.skip("Use the --wsl2 pytest flag to run this test")
 
     generated_file_directory, actual_input_files, output_file_directory = (
