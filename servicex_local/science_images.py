@@ -75,6 +75,69 @@ def run_command_with_logging(command: List[str], log_file: Path) -> None:
     do_the_work()
 
 
+def write_file_runner_script(generated_files_dir: Path) -> None:
+    """Create a shell script that runs the Python kickoff script.
+
+    This script checks for a Python executable (`python3` or `python`) and
+    uses it to run the `kick_off.py` script, passing through any arguments.
+
+    Args:
+        generated_files_dir (Path): The directory where the script will be written.
+    """
+
+    file_runner = """#!/bin/bash
+python_cmd=$(command -v python3 || command -v python)
+exec $python_cmd /generated/kick_off.py $@
+"""
+    with open(generated_files_dir / "file_runner.sh", "w", newline="\n") as f:
+        for ln in file_runner.splitlines():
+            f.write(ln.strip() + "\n")
+
+
+def write_kickoff_script(generated_files_dir: Path) -> None:
+    """Create a Python script that launches the transformer payload.
+
+    This script reads transformer configuration from a JSON file to determine
+    the file to execute and the appropriate language interpreter.
+
+    It supports Python and Bash payloads and sets file permissions for
+    grid security proxy files if found.
+
+    Args:
+        generated_files_dir (Path): The directory where the script will be written.
+
+    Raises:
+        ValueError: If the transformer language is not supported."""
+
+    kick_off = """
+import json
+import os
+import sys
+
+x509up_path = "/tmp/grid-security/x509up"
+if os.path.exists(x509up_path):
+    os.chmod(x509up_path, 0o600)
+
+with open("/generated/transformer_capabilities.json") as f:
+    info = json.load(f)
+file_to_run = info["command"]
+arg1 = sys.argv[1]
+arg2 = sys.argv[2]
+arg3 = sys.argv[3]
+if info["language"] == "python":
+    exe = sys.executable
+    ret_code = os.system(exe + " " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
+elif info["language"] == "bash":
+    ret_code = os.system("bash " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
+else:
+    raise ValueError("Unsupported language: " + info["language"])
+exit_code = ret_code >> 8
+sys.exit(exit_code)
+"""
+    with open(generated_files_dir / "kick_off.py", "w") as f:
+        f.write(kick_off)
+
+
 class BaseScienceImage(ABC):
     @abstractmethod
     def transform(
@@ -302,45 +365,8 @@ class DockerScienceImage(BaseScienceImage):
                 input_volume = ["-v", f"{str(input_path.absolute())}:/input_file.root"]
                 container_path = "/input_file.root"
 
-            # Create the file that will actually do the work. We need to look at the transformer
-            # capabilities json file to figure it out.
-            file_runner = """#!/bin/bash
-python_cmd=$(command -v python3 || command -v python)
-exec $python_cmd /generated/kick_off.py $@
-"""
-            with open(generated_files_dir / "file_runner.sh", "w", newline="\n") as f:
-                for ln in file_runner.splitlines():
-                    f.write(ln.strip() + "\n")
-
-            # Create the file that will actually do the work. We need to look at the transformer
-            # capabilities json file to figure it out.
-            kick_off = """
-import json
-import os
-import sys
-
-x509up_path = "/tmp/grid-security/x509up"
-if os.path.exists(x509up_path):
-    os.chmod(x509up_path, 0o600)
-
-with open("/generated/transformer_capabilities.json") as f:
-    info = json.load(f)
-file_to_run = info["command"]
-arg1 = sys.argv[1]
-arg2 = sys.argv[2]
-arg3 = sys.argv[3]
-if info["language"] == "python":
-    exe = sys.executable
-    ret_code = os.system(exe + " " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
-elif info["language"] == "bash":
-    ret_code = os.system("bash " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
-else:
-    raise ValueError("Unsupported language: " + info["language"])
-exit_code = ret_code >> 8
-sys.exit(exit_code)
-"""
-            with open(generated_files_dir / "kick_off.py", "w") as f:
-                f.write(kick_off)
+            write_file_runner_script(generated_files_dir)
+            write_kickoff_script(generated_files_dir)
 
             try:
                 command = [
@@ -445,41 +471,8 @@ class SingularityScienceImage(BaseScienceImage):
                 ]
                 container_path = "/input_file.root"
 
-            file_runner = """#!/bin/bash
-python_cmd=$(command -v python3 || command -v python)
-exec $python_cmd /generated/kick_off.py $@
-"""
-            with open(generated_files_dir / "file_runner.sh", "w", newline="\n") as f:
-                for ln in file_runner.splitlines():
-                    f.write(ln.strip() + "\n")
-
-            kick_off = """
-import json
-import os
-import sys
-
-x509up_path = "/tmp/grid-security/x509up"
-if os.path.exists(x509up_path):
-    os.chmod(x509up_path, 0o600)
-
-with open("/generated/transformer_capabilities.json") as f:
-    info = json.load(f)
-file_to_run = info["command"]
-arg1 = sys.argv[1]
-arg2 = sys.argv[2]
-arg3 = sys.argv[3]
-if info["language"] == "python":
-    exe = sys.executable
-    ret_code = os.system(exe + " " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
-elif info["language"] == "bash":
-    ret_code = os.system("bash " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
-else:
-    raise ValueError("Unsupported language: " + info["language"])
-exit_code = ret_code >> 8
-sys.exit(exit_code)
-"""
-            with open(generated_files_dir / "kick_off.py", "w") as f:
-                f.write(kick_off)
+            write_file_runner_script(generated_files_dir)
+            write_kickoff_script(generated_files_dir)
 
             import tempfile
 
