@@ -299,13 +299,15 @@ exit $r
 
 
 class DockerScienceImage(BaseScienceImage):
-    def __init__(self, image_name: str):
+    def __init__(self, image_name: str, memory_limit: Optional[float] = None):
         """Science image will run in a Docker container with the specified image name/tag
 
         Args:
             image_name (str): The name/tag of the Docker image to be used
+            memory_limit (Optional[float]): Memory limit for the Docker container in GB
         """
         self.image_name = image_name
+        self.memory_limit = memory_limit
 
     def transform(
         self,
@@ -368,6 +370,17 @@ class DockerScienceImage(BaseScienceImage):
             write_file_runner_script(generated_files_dir)
             write_kickoff_script(generated_files_dir)
 
+            memory_options = (
+                [
+                    "-m",
+                    f"{self.memory_limit}g",
+                    "--memory-swap",
+                    f"{self.memory_limit}g",
+                ]
+                if self.memory_limit
+                else []
+            )
+
             try:
                 command = [
                     "docker",
@@ -375,6 +388,7 @@ class DockerScienceImage(BaseScienceImage):
                     "--name",
                     container_name,
                     "--rm",
+                    *memory_options,
                     "-v",
                     f"{generated_files_dir.absolute()}:/generated",
                     "-v",

@@ -418,6 +418,83 @@ def test_docker_science_log_warnings(tmp_path, caplog, request):
     assert "this is log line 2" in written_log
 
 
+def test_docker_command(tmp_path: Path):
+
+    generated_file_directory, actual_input_files, output_file_directory = (
+        prepare_input_files(
+            tmp_path, "tests/genfiles_raw/query7_logging_warnings", ["file1.root"]
+        )
+    )
+
+    from unittest.mock import patch
+
+    captured_command = {}
+
+    def mock_run_command_with_logging(command, log_file):
+        captured_command["command"] = command
+        captured_command["log_file"] = log_file
+
+        # Create the required output file
+        (output_file_directory / "junk.txt").touch()
+
+    with patch(
+        "servicex_local.science_images.run_command_with_logging",
+        side_effect=mock_run_command_with_logging,
+    ):
+        docker = DockerScienceImage(
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5"
+        )
+        docker.transform(
+            generated_file_directory,
+            actual_input_files,
+            output_file_directory,
+            "root-file",
+        )
+
+    assert captured_command["command"][0] == "docker"
+    assert not ("-m" in captured_command["command"])
+
+
+def test_docker_command_memory_limit(tmp_path: Path):
+
+    generated_file_directory, actual_input_files, output_file_directory = (
+        prepare_input_files(
+            tmp_path, "tests/genfiles_raw/query7_logging_warnings", ["file1.root"]
+        )
+    )
+
+    from unittest.mock import patch
+
+    captured_command = {}
+
+    def mock_run_command_with_logging(command, log_file):
+        captured_command["command"] = command
+        captured_command["log_file"] = log_file
+
+        # Create the required output file
+        (output_file_directory / "junk.txt").touch()
+
+    with patch(
+        "servicex_local.science_images.run_command_with_logging",
+        side_effect=mock_run_command_with_logging,
+    ):
+        docker = DockerScienceImage(
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5", memory_limit=1.5
+        )
+        docker.transform(
+            generated_file_directory,
+            actual_input_files,
+            output_file_directory,
+            "root-file",
+        )
+
+    # Now you can assert on captured_command['command'] as needed
+    assert captured_command["command"][0] == "docker"
+    assert "1.5g" in captured_command["command"]
+    assert "-m" in captured_command["command"]
+    assert "--memory-swap" in captured_command["command"]
+
+
 @pytest.mark.parametrize(
     "wsl_distro, release, transform_path, exception_message",
     [
