@@ -463,8 +463,6 @@ class SingularityScienceImage(BaseScienceImage):
             x509up_volume = []
 
         for input_file in input_files:
-            safe_image = self.image_uri.replace(":", "_").replace("/", "_")
-
             output_name = Path(input_file).name
 
             if input_file.startswith(("root://", "http://", "https://")):
