@@ -75,6 +75,69 @@ def run_command_with_logging(command: List[str], log_file: Path) -> None:
     do_the_work()
 
 
+def write_file_runner_script(generated_files_dir: Path) -> None:
+    """Create a shell script that runs the Python kickoff script.
+
+    This script checks for a Python executable (`python3` or `python`) and
+    uses it to run the `kick_off.py` script, passing through any arguments.
+
+    Args:
+        generated_files_dir (Path): The directory where the script will be written.
+    """
+
+    file_runner = """#!/bin/bash
+python_cmd=$(command -v python3 || command -v python)
+exec $python_cmd /generated/kick_off.py $@
+"""
+    with open(generated_files_dir / "file_runner.sh", "w", newline="\n") as f:
+        for ln in file_runner.splitlines():
+            f.write(ln.strip() + "\n")
+
+
+def write_kickoff_script(generated_files_dir: Path) -> None:
+    """Create a Python script that launches the transformer payload.
+
+    This script reads transformer configuration from a JSON file to determine
+    the file to execute and the appropriate language interpreter.
+
+    It supports Python and Bash payloads and sets file permissions for
+    grid security proxy files if found.
+
+    Args:
+        generated_files_dir (Path): The directory where the script will be written.
+
+    Raises:
+        ValueError: If the transformer language is not supported."""
+
+    kick_off = """
+import json
+import os
+import sys
+
+x509up_path = "/tmp/grid-security/x509up"
+if os.path.exists(x509up_path):
+    os.chmod(x509up_path, 0o600)
+
+with open("/generated/transformer_capabilities.json") as f:
+    info = json.load(f)
+file_to_run = info["command"]
+arg1 = sys.argv[1]
+arg2 = sys.argv[2]
+arg3 = sys.argv[3]
+if info["language"] == "python":
+    exe = sys.executable
+    ret_code = os.system(exe + " " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
+elif info["language"] == "bash":
+    ret_code = os.system("bash " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
+else:
+    raise ValueError("Unsupported language: " + info["language"])
+exit_code = ret_code >> 8
+sys.exit(exit_code)
+"""
+    with open(generated_files_dir / "kick_off.py", "w") as f:
+        f.write(kick_off)
+
+
 class BaseScienceImage(ABC):
     @abstractmethod
     def transform(
@@ -236,13 +299,15 @@ exit $r
 
 
 class DockerScienceImage(BaseScienceImage):
-    def __init__(self, image_name: str):
+    def __init__(self, image_name: str, memory_limit: Optional[float] = None):
         """Science image will run in a Docker container with the specified image name/tag
 
         Args:
             image_name (str): The name/tag of the Docker image to be used
+            memory_limit (Optional[float]): Memory limit for the Docker container in GB
         """
         self.image_name = image_name
+        self.memory_limit = memory_limit
 
     def transform(
         self,
@@ -302,45 +367,19 @@ class DockerScienceImage(BaseScienceImage):
                 input_volume = ["-v", f"{str(input_path.absolute())}:/input_file.root"]
                 container_path = "/input_file.root"
 
-            # Create the file that will actually do the work. We need to look at the transformer
-            # capabilities json file to figure it out.
-            file_runner = """#!/bin/bash
-python_cmd=$(command -v python3 || command -v python)
-exec $python_cmd /generated/kick_off.py $@
-"""
-            with open(generated_files_dir / "file_runner.sh", "w", newline="\n") as f:
-                for ln in file_runner.splitlines():
-                    f.write(ln.strip() + "\n")
+            write_file_runner_script(generated_files_dir)
+            write_kickoff_script(generated_files_dir)
 
-            # Create the file that will actually do the work. We need to look at the transformer
-            # capabilities json file to figure it out.
-            kick_off = """
-import json
-import os
-import sys
-
-x509up_path = "/tmp/grid-security/x509up"
-if os.path.exists(x509up_path):
-    os.chmod(x509up_path, 0o600)
-
-with open("/generated/transformer_capabilities.json") as f:
-    info = json.load(f)
-file_to_run = info["command"]
-arg1 = sys.argv[1]
-arg2 = sys.argv[2]
-arg3 = sys.argv[3]
-if info["language"] == "python":
-    exe = sys.executable
-    ret_code = os.system(exe + " " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
-elif info["language"] == "bash":
-    ret_code = os.system("bash " + file_to_run + " " + arg1 + " " + arg2 + " " + arg3)
-else:
-    raise ValueError("Unsupported language: " + info["language"])
-exit_code = ret_code >> 8
-sys.exit(exit_code)
-"""
-            with open(generated_files_dir / "kick_off.py", "w") as f:
-                f.write(kick_off)
+            memory_options = (
+                [
+                    "-m",
+                    f"{self.memory_limit}g",
+                    "--memory-swap",
+                    f"{self.memory_limit}g",
+                ]
+                if self.memory_limit
+                else []
+            )
 
             try:
                 command = [
@@ -349,6 +388,7 @@ sys.exit(exit_code)
                     "--name",
                     container_name,
                     "--rm",
+                    *memory_options,
                     "-v",
                     f"{generated_files_dir.absolute()}:/generated",
                     "-v",
@@ -372,6 +412,112 @@ sys.exit(exit_code)
                     f"Failed to start docker container for {input_file}: "
                     f"{e.stderr.decode('utf-8')}"
                 )
+
+        output_files = list(output_directory.glob("*"))
+        if len(output_files) != len(input_files):
+            raise RuntimeError(
+                f"Number of output files ({len(output_files)}) does not match number of "
+                f"input files ({len(input_files)})"
+            )
+
+        return output_files
+
+
+class SingularityScienceImage(BaseScienceImage):
+    def __init__(self, image_uri: str):
+        """Science image will run in a Singularity container with the specified image URI
+
+        Args:
+            image_uri (str): The path/URI of the Singularity image
+        """
+        self.image_uri = image_uri
+
+    def transform(
+        self,
+        generated_files_dir: Path,
+        input_files: List[str],
+        output_directory: Path,
+        output_format: str,
+    ) -> List[Path]:
+        """Transform the input files and return the path to the output file.
+
+        This method works by invoking the container with a specific transformation command.
+
+        Args:
+            generated_files_dir (str): Directory for generated files
+            input_files (List[str]): List of input files
+            output_directory (Path): The output directory
+            output_format (str): The desired output format
+
+        Returns:
+            List[Path]: List of output file paths
+        """
+
+        output_paths = []
+        x509up_path = Path(os.getenv("TEMP", "/tmp")) / "x509up"
+        if x509up_path.exists():
+            x509up_volume = ["--bind", f"{x509up_path}:/tmp/grid-security/x509up"]
+        else:
+            logger = logging.getLogger(__name__)
+            logger.warning("x509up certificate not found at /tmp/x509up")
+            x509up_volume = []
+
+        for input_file in input_files:
+            output_name = Path(input_file).name
+
+            if input_file.startswith(("root://", "http://", "https://")):
+                input_volume = []
+                container_path = input_file
+            else:
+                input_path = Path(input_file)
+                if not input_path.exists():
+                    raise FileNotFoundError(
+                        f"Input file for Singularity image {input_file} not found."
+                    )
+                input_volume = [
+                    "--bind",
+                    f"{str(input_path.absolute())}:/input_file.root",
+                ]
+                container_path = "/input_file.root"
+
+            write_file_runner_script(generated_files_dir)
+            write_kickoff_script(generated_files_dir)
+
+            import tempfile
+
+            with tempfile.TemporaryDirectory() as temp_dir:
+
+                print(f"Temporary directory created at: {temp_dir}")
+
+                try:
+                    command = [
+                        "singularity",
+                        "exec",
+                        *x509up_volume,
+                        *input_volume,
+                        "--bind",
+                        f"{generated_files_dir.absolute()}:/generated",
+                        "--bind",
+                        f"{output_directory}:/servicex/output",
+                        "--pwd",
+                        str(temp_dir),
+                        self.image_uri,
+                        "bash",
+                        "/generated/file_runner.sh",
+                        container_path,
+                        f"/servicex/output/{output_name}",
+                        output_format,
+                    ]
+                    run_command_with_logging(
+                        command, log_file=generated_files_dir / "singularity_log.txt"
+                    )
+                    output_paths.append(output_directory / Path(input_file).name)
+
+                except subprocess.CalledProcessError as e:
+                    raise RuntimeError(
+                        f"Failed to start Singularity container for {input_file}: "
+                        f"{e.stderr.decode('utf-8')}"
+                    )
 
         output_files = list(output_directory.glob("*"))
         if len(output_files) != len(input_files):
