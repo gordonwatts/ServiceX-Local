@@ -450,9 +450,6 @@ class SingularityScienceImage(BaseScienceImage):
 
         for input_file in input_files:
             safe_image = self.image_uri.replace(":", "_").replace("/", "_")
-            container_name = (
-                f"sx_codegen_container_{safe_image}_{Path(input_file).stem}"
-            )
 
             output_name = Path(input_file).name
 
