@@ -102,7 +102,7 @@ def install_sx_local(
         host_port (int): Local host port to expose.
 
     Returns:
-        Tuple[str, str, SXLocalAdaptor]: Codegen name, backend name, adaptor.
+        Tuple[str, SXLocalAdaptor]: Codegen name, adaptor.
     """
     from servicex_local import LocalXAODCodegen, SXLocalAdaptor
 
@@ -133,4 +133,4 @@ def install_sx_local(
     )
 
     logging.info("Using local ServiceX endpoint: codegen %s", codegen_name)
-    return codegen_name, "local-backend", adaptor
+    return codegen_name, adaptor
