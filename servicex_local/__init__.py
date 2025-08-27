@@ -3,3 +3,4 @@ from .science_images import SingularityScienceImage  # noqa: F401
 from .codegen import LocalXAODCodegen, DockerCodegen  # noqa: F401
 from .adaptor import SXLocalAdaptor  # noqa: F401
 from .deliver import deliver  # noqa: F401
+from .helper import install_sx_local, find_dataset, Platform  # noqa: F401
