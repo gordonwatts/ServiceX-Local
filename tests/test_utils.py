@@ -64,7 +64,7 @@ def test_find_dataset_errors(input_path, expected_message):
     ],
 )
 def test_install_sx_local(monkeypatch, image, platform, expected_class):
-    codegen_name, backend_name, adaptor = install_sx_local(image, platform)
+    codegen_name, adaptor = install_sx_local(image, platform)
     assert isinstance(adaptor.science_runner, expected_class)
 
 
