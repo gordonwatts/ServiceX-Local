@@ -8,7 +8,7 @@ from servicex_local import LocalXAODCodegen
 def test_docker_codegen_xaod(tmp_path, request):
     "Do a basic func_adl uproot code generation from an official docker image"
     if not request.config.getoption("--docker"):
-        pytest.skip("Use the --wsl2 pytest flag to run this test")
+        pytest.skip("Use the --docker pytest flag to run this test")
 
     # Create a dummy output json file for capabilities.
     output_location = tmp_path / "codegen_output"

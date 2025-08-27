@@ -58,6 +58,7 @@ test = [
     "flake8>=5.0.4",
     "func_adl_xAOD",
     "black",
+    "pyfakefs",
 ]
 docs = [
     "sphinx>=7.0.1",
