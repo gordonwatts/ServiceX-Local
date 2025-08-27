@@ -412,7 +412,6 @@ class DockerScienceImage(BaseScienceImage):
                     f"Failed to start docker container for {input_file}: "
                     f"{e.stderr.decode('utf-8')}"
                 )
-            
             except FileNotFoundError:
                 raise RuntimeError(
                     "Docker is not installed or not found in PATH. "
@@ -524,7 +523,6 @@ class SingularityScienceImage(BaseScienceImage):
                         f"Failed to start Singularity container for {input_file}: "
                         f"{e.stderr.decode('utf-8')}"
                     )
-                
                 except FileNotFoundError:
                     raise RuntimeError(
                         "Singularity is not installed or not found in PATH. "

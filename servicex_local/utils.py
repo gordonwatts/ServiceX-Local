@@ -20,7 +20,8 @@ class Platform(Enum):
 def find_dataset(
     ds_name: str, prefer_local: bool = False
 ) -> Tuple[Union[dataset.FileList, dataset.Rucio, dataset.XRootD], bool]:
-    """Determine the type of dataset based on the input string and then return the ServiceX dataset object. 
+    """Determine the type of dataset based on the input
+    string and then return the ServiceX dataset object.
         Also, indicate if it should be accessed locally.
 
     Args:
