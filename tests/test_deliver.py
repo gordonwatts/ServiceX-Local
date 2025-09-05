@@ -1,3 +1,4 @@
+import getpass
 import os
 import tempfile
 import uuid
@@ -17,7 +18,9 @@ def restore_cache():
     """
     Fixture to restore the cache database to its original form after each test.
     """
-    cache_dir = Path(tempfile.gettempdir()) / "servicex"
+    cache_dir: Path = (
+        Path(tempfile.gettempdir()) / f"servicex_{getpass.getuser()}"
+    )  # noqa: E501
     cache_file = cache_dir / "cache.json"
     original_cache = None
 
@@ -53,7 +56,7 @@ def simple_adaptor():
 
             file_path = (
                 Path(tempfile.gettempdir())
-                / "servicex"
+                / f"servicex_{getpass.getuser()}"
                 / self._request_id
                 / "file1.root"
             )
@@ -96,7 +99,9 @@ def test_deliver_spec_simple(simple_adaptor):
         General=General(),
         Sample=[
             Sample(
-                Name="test_me", Dataset=dataset.FileList("test.root"), Query="query1"
+                Name="test_me",
+                Dataset=dataset.FileList("test.root"),
+                Query="query1",
             )
         ],
     )
@@ -150,7 +155,9 @@ def test_deliver_spec_simple_cache_hit(simple_adaptor):
         General=General(),
         Sample=[
             Sample(
-                Name="test_me", Dataset=dataset.FileList("test.root"), Query="query1"
+                Name="test_me",
+                Dataset=dataset.FileList("test.root"),
+                Query="query1",
             )
         ],
     )
@@ -168,7 +175,9 @@ def test_deliver_spec_simple_cache_ignore(simple_adaptor):
         General=General(),
         Sample=[
             Sample(
-                Name="test_me", Dataset=dataset.FileList("test.root"), Query="query1"
+                Name="test_me",
+                Dataset=dataset.FileList("test.root"),
+                Query="query1",
             )
         ],
     )

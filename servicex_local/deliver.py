@@ -1,15 +1,17 @@
+import getpass
 import hashlib
 import json
 import tempfile
-from typing import Any, Generator, List
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Generator, List
 
 from make_it_sync import make_sync
 from servicex import General, ResultDestination, Sample, ServiceXSpec
 from servicex.models import ResultFormat, TransformRequest, TransformStatus
 from servicex.query_core import QueryStringGenerator
 from servicex.servicex_client import GuardList
+
 from servicex_local import SXLocalAdaptor
 from servicex_local.adaptor import MinioLocalAdaptor
 
@@ -22,9 +24,11 @@ def _sample_run_info(
 
     Args:
         g (General): A general configuration object.
-        samples (List[Sample]): A list of Sample objects containing information about each sample.
+        samples (List[Sample]): A list of Sample objects containing information
+            about each sample.
     Yields:
-        TransformRequest: A TransformRequest object for each sample in the list.
+        TransformRequest:
+            A TransformRequest object for each sample in the list.
     """
     for s in samples:
         selection = (
@@ -55,7 +59,8 @@ def _sample_run_info(
 
 def _generate_cache_key(tq: TransformRequest) -> str:
     """
-    Generate a cache key based on the file_list and selection of the TransformRequest.
+    Generate a cache key based on the file_list and selection of the
+    TransformRequest.
 
     Args:
         tq (TransformRequest): The TransformRequest object.
@@ -66,8 +71,8 @@ def _generate_cache_key(tq: TransformRequest) -> str:
     return hashlib.md5(key.encode()).hexdigest()
 
 
-CACHE_DIR = Path(tempfile.gettempdir()) / "servicex"
-CACHE_FILE = CACHE_DIR / "cache.json"
+CACHE_DIR: Path = Path(tempfile.gettempdir()) / f"servicex_{getpass.getuser()}"
+CACHE_FILE: Path = CACHE_DIR / "cache.json"
 
 
 def _load_cache() -> dict[str, Any]:
