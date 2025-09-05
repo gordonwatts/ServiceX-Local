@@ -1,3 +1,4 @@
+import getpass
 import hashlib
 import json
 import tempfile
@@ -22,9 +23,11 @@ def _sample_run_info(
 
     Args:
         g (General): A general configuration object.
-        samples (List[Sample]): A list of Sample objects containing information about each sample.
+        samples (List[Sample]): A list of Sample objects containing information
+            about each sample.
     Yields:
-        TransformRequest: A TransformRequest object for each sample in the list.
+        TransformRequest:
+            A TransformRequest object for each sample in the list.
     """
     for s in samples:
         selection = (
@@ -55,7 +58,8 @@ def _sample_run_info(
 
 def _generate_cache_key(tq: TransformRequest) -> str:
     """
-    Generate a cache key based on the file_list and selection of the TransformRequest.
+    Generate a cache key based on the file_list and selection of the
+    TransformRequest.
 
     Args:
         tq (TransformRequest): The TransformRequest object.
@@ -66,8 +70,8 @@ def _generate_cache_key(tq: TransformRequest) -> str:
     return hashlib.md5(key.encode()).hexdigest()
 
 
-CACHE_DIR = Path(tempfile.gettempdir()) / "servicex"
-CACHE_FILE = CACHE_DIR / "cache.json"
+CACHE_DIR: Path = Path(tempfile.gettempdir()) / f"servicex_{getpass.getuser()}"
+CACHE_FILE: Path = CACHE_DIR / "cache.json"
 
 
 def _load_cache() -> dict[str, Any]:

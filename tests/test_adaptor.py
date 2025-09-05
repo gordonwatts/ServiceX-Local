@@ -1,3 +1,4 @@
+import getpass
 import logging
 import tempfile
 import uuid
@@ -76,7 +77,10 @@ async def test_adaptor_submit_transform_one_file(
     mock_codegen.gen_code.assert_called_once()
 
     # Verify the output directory contains one file
-    output_directory = Path(tempfile.gettempdir()) / f"servicex/{request_id}"
+    output_directory: Path = Path(tempfile.gettempdir()).joinpath(
+        f"servicex_{getpass.getuser()}",
+        request_id,
+    )
     output_files = list(output_directory.glob("*"))
     assert len(output_files) == 1
     assert output_files[0].name == "output_file.txt"
@@ -116,7 +120,10 @@ def code_gen_one_file() -> MagicMock:
 
 @pytest.fixture()
 def code_gen_error() -> MagicMock:
-    "Fail while writing a code-gen, and make sure that the file is actually written out."
+    """
+    Fail while writing a code-gen, and make sure the file is actually
+    written out.
+    """
 
     def generate_files(query: str, directory: Path):
         f = directory / "run_me.sh"
@@ -141,8 +148,8 @@ def science_runner_one_txt_file() -> MagicMock:
         output_file = output_directory / "output_file.txt"
         output_file.write_text("Hello, world!")
 
-        # Check all .sh files in the generated_files_dir directory for anything with linux line
-        # endings. If we find one, we should assert.
+        # Check all .sh files in the generated_files_dir directory for anything
+        # with Linux line endings. If we find one, we should assert.
         for file in generated_files_dir.glob("*.sh"):
             with file.open("rb") as f:
                 text = f.read().decode("utf-8")
@@ -266,7 +273,8 @@ async def test_adaptor_saved_code_on_error(
         ),
         None,
     )
-    assert error_message is not None, "Expected error message not found in logs"
+    msg = "Expected error message not found in logs"
+    assert error_message is not None, msg
     directory_path = error_message.split("found at: ")[1].strip()
     d = Path(directory_path)
     assert d.exists()
@@ -306,7 +314,10 @@ async def test_minio_list_bucket():
 
     # Mock the output directory to point to the temporary directory
     adaptor.request_id = "test_request_id"
-    output_directory = Path(tempfile.gettempdir()) / f"servicex/{adaptor.request_id}"
+    output_directory: Path = (
+        Path(tempfile.gettempdir())
+        / f"servicex_{getpass.getuser()}/{adaptor.request_id}"
+    )
     output_directory.mkdir(parents=True, exist_ok=True)
     (output_directory / "file1.txt").write_text("content1")
     (output_directory / "file2.txt").write_text("content2")
@@ -327,7 +338,10 @@ async def test_minio_download_file():
 
     # Mock the output directory to point to the temporary directory
     adaptor.request_id = "test_request_id"
-    output_directory = Path(tempfile.gettempdir()) / f"servicex/{adaptor.request_id}"
+    output_directory: Path = (
+        Path(tempfile.gettempdir())
+        / f"servicex_{getpass.getuser()}/{adaptor.request_id}"
+    )
     output_directory.mkdir(parents=True, exist_ok=True)
     (output_directory / "file1.txt").write_text("content1")
 
@@ -346,7 +360,10 @@ async def test_minio_get_signed_url():
 
     # Mock the output directory to point to the temporary directory
     adaptor.request_id = "test_request_id"
-    output_directory = Path(tempfile.gettempdir()) / f"servicex/{adaptor.request_id}"
+    output_directory: Path = (
+        Path(tempfile.gettempdir())
+        / f"servicex_{getpass.getuser()}/{adaptor.request_id}"
+    )
     output_directory.mkdir(parents=True, exist_ok=True)
     (output_directory / "file1.txt").write_text("content1")
 

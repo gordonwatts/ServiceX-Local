@@ -1,23 +1,26 @@
+import getpass
+import logging
+import shutil
+import tempfile
+import uuid
 from datetime import datetime
-from typing import List, Optional, Dict
+from pathlib import Path
+from typing import Dict, List, Optional
+
 from servicex.models import (
+    CachedDataset,
+    ResultFile,
     Status,
     TransformRequest,
     TransformStatus,
-    CachedDataset,
-    ResultFile,
 )
 from servicex_local.codegen import SXCodeGen
 from servicex_local.science_images import BaseScienceImage
-from pathlib import Path
-import tempfile
-import uuid
-import shutil
-import logging
 
 
 def _rewrite_sh_files(directory: Path):
-    """Rewrite all .sh files in the given directory to ensure they have Linux line endings.
+    """Rewrite all .sh files in the given directory to ensure they have Linux
+    line endings.
 
     Args:
         directory (Path): The directory to search for .sh files.
@@ -61,12 +64,21 @@ class SXLocalAdaptor:
         return {self.codegen_name: []}
 
     async def get_datasets(
-        self, did_finder: Optional[str] = None, show_deleted: bool = False
+        self,
+        did_finder: Optional[str] = None,
+        show_deleted: bool = False,
     ) -> List[CachedDataset]:
-        raise NotImplementedError("get_datasets is not implemented for SXLocalAdaptor")
+        raise NotImplementedError(
+            "get_datasets is not implemented for SXLocalAdaptor",
+        )
 
-    async def get_dataset(self, dataset_id: Optional[str] = None) -> CachedDataset:
-        raise NotImplementedError("get_dataset is not implemented for SXLocalAdaptor")
+    async def get_dataset(
+        self,
+        dataset_id: Optional[str] = None,
+    ) -> CachedDataset:
+        raise NotImplementedError(
+            "get_dataset is not implemented for SXLocalAdaptor",
+        )
 
     async def delete_dataset(self, dataset_id: Optional[str] = None) -> bool:
         raise NotImplementedError(
@@ -100,13 +112,17 @@ class SXLocalAdaptor:
             }
         )
 
-    async def submit_transform(self, transform_request: TransformRequest) -> str:
+    async def submit_transform(
+        self,
+        transform_request: TransformRequest,
+    ) -> str:
         """
         Submits a transformation request and processes the transformation.
 
         Args:
-            transform_request (TransformRequest): The transformation request containing
-                the selection, file list, result format, and result destination.
+            transform_request (TransformRequest):
+                The transformation request containing the selection, file
+                list, result format, and result destination.
 
         Returns:
             str: A unique request ID for the transformation.
@@ -118,7 +134,8 @@ class SXLocalAdaptor:
         1. Creates a temporary directory for generated files.
         2. Generates code based on the selection in the transform request.
         3. Creates a unique directory for the output files.
-        4. Runs the science image to perform the transformation on the input files.
+        4. Runs the science image to perform the transformation on the input
+           files.
         5. Stores the transformation status indexed by a GUID.
         6. Returns the GUID as the request ID.
         """
@@ -126,14 +143,19 @@ class SXLocalAdaptor:
             request_id = str(uuid.uuid4())
             try:
                 generated_files_dir = Path(generated_files_dir)
-                self.codegen.gen_code(transform_request.selection, generated_files_dir)
+                self.codegen.gen_code(
+                    transform_request.selection,
+                    generated_files_dir,
+                )
 
                 # Make sure all files have proper line endings
                 _rewrite_sh_files(generated_files_dir)
 
-                # Create a unique directory for the output files directly under the temp directory
-                output_directory = (
-                    Path(tempfile.gettempdir()) / f"servicex/{request_id}"
+                # Create a unique directory for the output files directly under
+                # the temp directory
+                output_directory: Path = (
+                    Path(tempfile.gettempdir())
+                    / f"servicex_{getpass.getuser()}/{request_id}"
                 )
                 output_directory.mkdir(parents=True, exist_ok=True)
 
@@ -145,7 +167,10 @@ class SXLocalAdaptor:
                 output_format = transform_request.result_format.name
 
                 output_files = self.science_runner.transform(
-                    generated_files_dir, input_files, output_directory, output_format
+                    generated_files_dir,
+                    input_files,
+                    output_directory,
+                    output_format,
                 )
 
                 # Store the TransformStatus indexed by a GUID
@@ -159,15 +184,20 @@ class SXLocalAdaptor:
 
             except Exception:
                 # Copy the files in generated_files_dir to the temp directory
-                dest_dir = (
-                    Path(tempfile.gettempdir()) / f"servicex_request_{request_id}"
+                dest_dir: Path = (
+                    Path(tempfile.gettempdir())
+                    / f"servicex_{getpass.getuser()}_request_{request_id}"
                 )
                 shutil.copytree(generated_files_dir, dest_dir)
 
-                # Log an error message with the location of the transform source files
+                # Log an error with the location of the transform
+                # source files
                 logger = logging.getLogger(__name__)
                 logger.error(
-                    f"Error during transformation. Transform files can be found at: {dest_dir}"
+                    (
+                        "Error during transformation. Transform files can be "
+                        f"found at: {dest_dir}"
+                    )
                 )
 
                 # Re-raise the exception
@@ -197,7 +227,10 @@ class MinioLocalAdaptor:
         )
 
     async def list_bucket(self) -> List[ResultFile]:
-        output_directory = Path(tempfile.gettempdir()) / f"servicex/{self.request_id}"
+        output_directory: Path = (
+            Path(tempfile.gettempdir())
+            / f"servicex_{getpass.getuser()}/{self.request_id}"
+        )
         result_files = []
         for file_path in output_directory.glob("*"):
             if file_path.is_file():
@@ -205,7 +238,8 @@ class MinioLocalAdaptor:
                     ResultFile(
                         filename=file_path.name,
                         size=file_path.stat().st_size,
-                        extension=file_path.suffix[1:],  # Remove the leading dot
+                        extension=file_path.suffix[1:],
+                        # Remove the leading dot
                     )
                 )
         return result_files
@@ -213,7 +247,10 @@ class MinioLocalAdaptor:
     async def download_file(
         self, object_name: str, local_dir: str, shorten_filename: bool = False
     ) -> Path:
-        output_directory = Path(tempfile.gettempdir()) / f"servicex/{self.request_id}"
+        output_directory: Path = (
+            Path(tempfile.gettempdir())
+            / f"servicex_{getpass.getuser()}/{self.request_id}"
+        )
         source_path = output_directory / object_name
         destination_path = Path(local_dir) / object_name
 
@@ -228,7 +265,10 @@ class MinioLocalAdaptor:
         return destination_path.resolve()
 
     async def get_signed_url(self, object_name: str) -> str:
-        output_directory = Path(tempfile.gettempdir()) / f"servicex/{self.request_id}"
+        output_directory: Path = (
+            Path(tempfile.gettempdir())
+            / f"servicex_{getpass.getuser()}/{self.request_id}"
+        )
         file_path = output_directory / object_name
 
         if not file_path.exists():
@@ -240,4 +280,6 @@ class MinioLocalAdaptor:
 
     @classmethod
     def hash_path(cls, file_name):
-        raise NotImplementedError("hash_path is not implemented for MockMinioAdapter")
+        raise NotImplementedError(
+            "hash_path is not implemented for MockMinioAdapter",
+        )
