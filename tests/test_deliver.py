@@ -1,5 +1,5 @@
-import os
 import getpass
+import os
 import tempfile
 import uuid
 from datetime import datetime
@@ -7,12 +7,7 @@ from pathlib import Path
 
 import pytest
 from servicex import General, ResultDestination, Sample, ServiceXSpec, dataset
-from servicex.models import (
-    ResultFormat,
-    Status,
-    TransformRequest,
-    TransformStatus,
-)
+from servicex.models import ResultFormat, Status, TransformRequest, TransformStatus
 from servicex.query_core import QueryStringGenerator
 
 from servicex_local import deliver

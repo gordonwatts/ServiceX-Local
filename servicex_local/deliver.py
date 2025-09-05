@@ -2,15 +2,16 @@ import getpass
 import hashlib
 import json
 import tempfile
-from typing import Any, Generator, List
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Generator, List
 
 from make_it_sync import make_sync
 from servicex import General, ResultDestination, Sample, ServiceXSpec
 from servicex.models import ResultFormat, TransformRequest, TransformStatus
 from servicex.query_core import QueryStringGenerator
 from servicex.servicex_client import GuardList
+
 from servicex_local import SXLocalAdaptor
 from servicex_local.adaptor import MinioLocalAdaptor
 

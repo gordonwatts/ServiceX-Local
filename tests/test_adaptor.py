@@ -7,16 +7,9 @@ from unittest.mock import MagicMock
 
 import pytest
 from servicex import ResultDestination
-from servicex.models import (
-    ResultFormat,
-    Status,
-    TransformRequest,
-    TransformStatus,
-)
+from servicex.models import ResultFormat, Status, TransformRequest, TransformStatus
 
-from servicex_local import (
-    SXLocalAdaptor,
-)
+from servicex_local import SXLocalAdaptor
 from servicex_local.adaptor import MinioLocalAdaptor
 
 
