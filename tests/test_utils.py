@@ -3,6 +3,7 @@ from servicex_local import find_dataset, install_sx_local, Platform
 from servicex_local import DockerScienceImage, SingularityScienceImage, WSL2ScienceImage
 import os
 
+
 @pytest.mark.parametrize(
     "input_path, prefer_local, expected_local, fs_file",
     [
@@ -37,7 +38,7 @@ def test_find_dataset(fs, input_path, prefer_local, expected_local, fs_file):
 @pytest.mark.parametrize(
     "input_path, expected_message",
     [
-        (r"\data\test.root" if os.name == "nt" else "/data/test.root", 
+        (r"\data\test.root" if os.name == "nt" else "/data/test.root",
          "looks like a file path"),  # non-existent path
         ("test.root", "missing a Rucio namespace"),  # ambiguous file name
         ("file:///data/test.root", "Local file"),  # file:// that doesn’t exist
