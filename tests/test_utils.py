@@ -37,7 +37,8 @@ def test_find_dataset(fs, input_path, prefer_local, expected_local, fs_file):
 @pytest.mark.parametrize(
     "input_path, expected_message",
     [
-        (r"\data\test.root" if os.name == "nt" else "/data/test.root", "looks like a file path"),  # non-existent path
+        (r"\data\test.root" if os.name == "nt" else "/data/test.root", 
+         "looks like a file path"),  # non-existent path
         ("test.root", "missing a Rucio namespace"),  # ambiguous file name
         ("file:///data/test.root", "Local file"),  # file:// that doesn’t exist
     ],
