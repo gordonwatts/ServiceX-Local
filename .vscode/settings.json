@@ -29,7 +29,8 @@
         "xaodr"
     ],
     "python.testing.pytestArgs": [
-        "--wsl2",
-        "--docker"
-    ]
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }

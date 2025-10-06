@@ -412,6 +412,11 @@ class DockerScienceImage(BaseScienceImage):
                     f"Failed to start docker container for {input_file}: "
                     f"{e.stderr.decode('utf-8')}"
                 )
+            except FileNotFoundError:
+                raise RuntimeError(
+                    "Docker is not installed or not found in PATH. "
+                    "Please install Docker or use Singularity/WSL2 options."
+                )
 
         output_files = list(output_directory.glob("*"))
         if len(output_files) != len(input_files):
@@ -517,6 +522,11 @@ class SingularityScienceImage(BaseScienceImage):
                     raise RuntimeError(
                         f"Failed to start Singularity container for {input_file}: "
                         f"{e.stderr.decode('utf-8')}"
+                    )
+                except FileNotFoundError:
+                    raise RuntimeError(
+                        "Singularity is not installed or not found in PATH. "
+                        "Please install Docker or use Docker/WSL2 options."
                     )
 
         output_files = list(output_directory.glob("*"))
