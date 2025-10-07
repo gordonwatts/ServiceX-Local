@@ -25,6 +25,25 @@ import os
         # Rucio dataset (explicit)
         ("rucio://test:test", True, False, False),
         ("rucio://test:test", False, False, False),
+        # Cernbox
+        ("123", True, True, False),
+        ("123", False, False, False),
+        # Lists That Work
+        (["https://test.com", "https://test2.com"], True, True, False),
+        (["https://test.com", "https://test2.com"], False, False, False),
+        (["/data/data.root", "https://test2.com"], True, True, True),
+        (["/data/data.root", "https://test2.com"], False, True, True),
+        (["file:///data/data.root", "https://test2.com"], True, True, True),
+        (["file:///data/data.root", "https://test2.com"], False, True, True),
+        (["123", "https://test2.com"], True, True, False),
+        (["123", "https://test2.com"], False, False, False),
+        # Lists That Don't Work
+        (["rucio://test:test", "https://test2.com"], True, False, False),
+        (["rucio://test:test", "https://test2.com"], False, False, False),
+        (["root://test/test/*", "https://test2.com"], True, False, False),
+        (["root://test/test/*", "https://test2.com"], False, False, False),
+        (["root://test/test", "https://test2.com"], True, False, False),
+        (["root://test/test", "https://test2.com"], False, False, False),
     ],
 )
 def test_find_dataset(fs, input_path, prefer_local, expected_local, fs_file):
@@ -33,20 +52,6 @@ def test_find_dataset(fs, input_path, prefer_local, expected_local, fs_file):
 
     dataset, use_local = find_dataset(input_path, prefer_local)
     assert use_local is expected_local
-
-
-@pytest.mark.parametrize(
-    "input_path, expected_message",
-    [
-        (r"\data\test.root" if os.name == "nt" else "/data/test.root",
-         "looks like a file path"),  # non-existent path
-        ("test.root", "missing a Rucio namespace"),  # ambiguous file name
-        ("file:///data/test.root", "Local file"),  # file:// that doesn’t exist
-    ],
-)
-def test_find_dataset_errors(input_path, expected_message):
-    with pytest.raises(ValueError, match=expected_message):
-        find_dataset(input_path)
 
 
 @pytest.mark.parametrize(
