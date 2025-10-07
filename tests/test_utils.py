@@ -1,7 +1,6 @@
 import pytest
 from servicex_local import find_dataset, install_sx_local, Platform
 from servicex_local import DockerScienceImage, SingularityScienceImage, WSL2ScienceImage
-import os
 
 
 @pytest.mark.parametrize(

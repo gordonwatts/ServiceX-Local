@@ -22,7 +22,8 @@ def is_local_filelist(file_list: list[str], force_local: bool) -> bool:
     """Check if the provided list of dataset names is valid.
     Args:
         file_list (list[str]): List of dataset names.
-        force_local (bool): Force local access. Used to check if any of the files require local access.
+        force_local (bool): Force local access. Used to
+        check if any of the files require local access.
     Returns:
         bool: True if the list is valid, False otherwise.
     """
