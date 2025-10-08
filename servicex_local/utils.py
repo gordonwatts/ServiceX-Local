@@ -73,10 +73,10 @@ def find_dataset(
 
     if isinstance(ds_name, list):
         if is_local_filelist(ds_name, True):
-            return dataset.FileList([ds_name]), True
+            return dataset.FileList(ds_name), True
         if is_local_filelist(ds_name, False):
-            return dataset.FileList([ds_name]), prefer_local
-        return dataset.FileList([ds_name]), False
+            return dataset.FileList(ds_name), prefer_local
+        return dataset.FileList(ds_name), False
 
     if is_stored_locally(ds_name):
         return dataset.FileList([ds_name]), True
