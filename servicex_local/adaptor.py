@@ -96,6 +96,7 @@ class SXLocalAdaptor:
         return TransformStatus(
             **{
                 "did": ",".join(transform_request.file_list),
+                "did_id": 0,
                 "selection": transform_request.selection,
                 "request_id": request_id,
                 "status": Status.complete,
