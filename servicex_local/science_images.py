@@ -118,9 +118,16 @@ x509up_path = "/tmp/grid-security/x509up"
 if os.path.exists(x509up_path):
     os.chmod(x509up_path, 0o600)
 
-with open("/generated/transformer_capabilities.json") as f:
+script_dir = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(script_dir, "transformer_capabilities.json")) as f:
     info = json.load(f)
+
 file_to_run = info["command"]
+if file_to_run.startswith("/generated/"):
+    file_to_run = os.path.join(script_dir, file_to_run.removeprefix("/generated/"))
+elif not os.path.isabs(file_to_run):
+    file_to_run = os.path.join(script_dir, file_to_run)
+
 arg1 = sys.argv[1]
 arg2 = sys.argv[2]
 arg3 = sys.argv[3]
@@ -214,7 +221,6 @@ class WSL2ScienceImage(BaseScienceImage):
         assert (
             generated_files_dir.exists()
         ), f"Missing generate files directory: {generated_files_dir}!"
-        wsl_generated_files_dir = self._convert_to_wsl_path(generated_files_dir)
 
         for input_file in input_files:
             # Check if input_file is a root:// or http:// path
@@ -243,16 +249,21 @@ if os.path.exists(x509up_path):
     os.chmod(x509up_path, 0o600)
     os.system("ls -l " + x509up_path)
 
-with open("{wsl_generated_files_dir}/transformer_capabilities.json") as f:
+script_dir = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(script_dir, "transformer_capabilities.json")) as f:
     info = json.load(f)
+
 file_to_run = info["command"]
-# Strip off the default /generated from the file name.
-file_to_run = file_to_run.replace("/generated", "")
+if file_to_run.startswith("/generated/"):
+    file_to_run = os.path.join(script_dir, file_to_run.removeprefix("/generated/"))
+elif not os.path.isabs(file_to_run):
+    file_to_run = os.path.join(script_dir, file_to_run)
+
 if info["language"] == "python":
-    ret_code = os.system("python3 {wsl_generated_files_dir}/" + file_to_run + " {wsl_input_file} "
+    ret_code = os.system("python3 " + file_to_run + " {wsl_input_file} "
         + "{wsl_output_directory}/{input_path_name} {output_format}")
 elif info["language"] == "bash":
-    ret_code = os.system("bash {wsl_generated_files_dir}/" + file_to_run
+    ret_code = os.system("bash " + file_to_run
         + " {wsl_input_file} {wsl_output_directory}/{input_path_name} {output_format}")
 else:
     raise ValueError("Unsupported language: " + info["language"])
@@ -269,10 +280,12 @@ tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
 cd $tmp_dir
 pwd
 
+script_dir="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
+
 # source /etc/profile.d/startup-atlas.sh
 setupATLAS
 asetup AnalysisBase,{self._release},here
-python {wsl_generated_files_dir}/kick_off.py
+python "$script_dir/kick_off.py"
 r=$?
 exit $r
 """
