@@ -7,6 +7,7 @@ from typing import Tuple, Union
 from urllib.parse import unquote, urlparse
 
 from servicex import dataset
+from servicex_analysis_utils import ds_type_resolver
 
 
 class Platform(Enum):
@@ -17,9 +18,46 @@ class Platform(Enum):
     wsl2 = "wsl2"
 
 
+def is_local_filelist(file_list: list[str], force_local: bool) -> bool:
+    """Check if the provided list of dataset names is valid.
+    Args:
+        file_list (list[str]): List of dataset names.
+        force_local (bool): Force local access. Used to
+        check if any of the files require local access.
+    Returns:
+        bool: True if the list is valid, False otherwise.
+    """
+    for ds in file_list:
+        if find_dataset(ds, not force_local)[1] is force_local:
+            return force_local
+    return not force_local
+
+
+def is_stored_locally(ds_name: str) -> bool:
+    """Check if the provided dataset name is a local file path.
+    Args:
+        ds_name (str): Dataset name.
+    Returns:
+        bool: True if the dataset is a local file path, False otherwise.
+    """
+    file = Path(ds_name).absolute()
+    if file.exists():
+        return True
+    if re.match(r"^file://", ds_name):
+        parsed_uri = urlparse(ds_name)
+        file_path = unquote(parsed_uri.path)
+        if os.name == "nt" and file_path.startswith("/"):
+            file_path = file_path[1:]
+        file = Path(file_path).absolute()
+        return True
+    return False
+
+
 def find_dataset(
-    ds_name: str, prefer_local: bool = False
-) -> Tuple[Union[dataset.FileList, dataset.Rucio, dataset.XRootD], bool]:
+    ds_name: Union[str, list[str]], prefer_local: bool = False
+) -> Tuple[
+    Union[dataset.FileList, dataset.Rucio, dataset.XRootD, dataset.CERNOpenData], bool
+]:
     """Determine the type of dataset based on the input
     string and then return the ServiceX dataset object.
         Also, indicate if it should be accessed locally.
@@ -32,64 +70,38 @@ def find_dataset(
         Tuple[dataset type, bool]: The dataset object and a flag indicating
         if it should be accessed locally.
     """
-    what_is_it = None
 
-    if re.match(r"^https?://", ds_name):
-        what_is_it = "url"
-        url = ds_name
+    if isinstance(ds_name, list):
+        if is_local_filelist(ds_name, True):
+            return dataset.FileList(ds_name), True
+        if is_local_filelist(ds_name, False):
+            return dataset.FileList(ds_name), prefer_local
+        return dataset.FileList(ds_name), False
 
-        # Special case for CERNBox URLs
-        if not prefer_local:
-            parsed_url = urlparse(url)
-            if "cernbox.cern.ch" in parsed_url.netloc and parsed_url.path.startswith(
-                "/files/spaces"
-            ):
-                remote_file = f"root://eospublic.cern.ch{parsed_url.path[13:]}"
-                what_is_it = "remote_file"
+    if is_stored_locally(ds_name):
+        return dataset.FileList([ds_name]), True
 
-    elif re.match(r"^file://", ds_name):
-        parsed_uri = urlparse(ds_name)
-        file_path = unquote(parsed_uri.path)
-        if os.name == "nt" and file_path.startswith("/"):
-            file_path = file_path[1:]
-        file = Path(file_path).absolute()
-        what_is_it = "file"
+    ds = ds_type_resolver(ds_name)
 
-    elif re.match(r"^rucio://", ds_name):
-        what_is_it = "rucio"
-        did = ds_name[8:]
-
-    else:
-        file = Path(ds_name).absolute()
-        if file.exists():
-            what_is_it = "file"
-        else:
-            if os.path.sep in ds_name:
-                raise ValueError(
-                    f"{ds_name} looks like a file path, but the file does not exist"
-                )
-            did = ds_name
-            what_is_it = "rucio"
-
-    if what_is_it == "url":
-        logging.debug("Interpreting %s as a URL", ds_name)
-        return dataset.FileList([url]), prefer_local
-
-    if what_is_it == "file":
-        logging.debug("Interpreting %s as a local file (%s)", ds_name, file)
-        if file.exists():
-            return dataset.FileList([str(file)]), True
-        raise ValueError(f"Local file {file} does not exist.")
-
-    if what_is_it == "remote_file":
-        logging.debug("Interpreting %s as a remote file (%s)", ds_name, remote_file)
-        return dataset.FileList([remote_file]), False
-
-    if what_is_it == "rucio":
-        logging.debug("Interpreting %s as a Rucio dataset (%s)", ds_name, did)
-        return dataset.Rucio(did), False
-
-    raise RuntimeError(f"Unknown input type: {what_is_it}")
+    if isinstance(ds, dataset.Rucio):
+        return ds, False
+    if isinstance(ds, dataset.XRootD):
+        return ds, False
+    if isinstance(ds, dataset.CERNOpenData):
+        return ds, prefer_local
+    if isinstance(ds, dataset.FileList):
+        if re.match(r"^https?://", ds_name):
+            # Special case for CERNBox URLs
+            if not prefer_local:
+                parsed_url = urlparse(ds_name)
+                if (
+                    "cernbox.cern.ch" in parsed_url.netloc
+                    and parsed_url.path.startswith("/files/spaces")
+                ):
+                    return ds, False
+            return ds, prefer_local
+        if re.match(r"^root://", ds_name):
+            return ds, False
 
 
 def install_sx_local(
