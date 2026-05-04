@@ -72,6 +72,7 @@ def simple_adaptor():
             return TransformStatus(
                 **{
                     "did": "file1",
+                    "did_id": 0,
                     "selection": "q",
                     "request_id": request_id,
                     "status": Status.complete,
