@@ -123,7 +123,7 @@ async def deliver_async(
                 else None
             )
             info = {
-                k.replace("_", "-") if k != "request_id" else k: v
+                k.replace("_", "-") if k not in ("request_id", "did_id") else k: v
                 for k, v in info.items()
             }
 
