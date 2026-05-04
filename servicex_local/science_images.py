@@ -388,6 +388,8 @@ class DockerScienceImage(BaseScienceImage):
                     "--name",
                     container_name,
                     "--rm",
+                    "--platform",
+                    "linux/amd64",
                     *memory_options,
                     "-v",
                     f"{generated_files_dir.absolute()}:/generated",
