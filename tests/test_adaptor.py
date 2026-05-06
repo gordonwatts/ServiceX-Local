@@ -278,6 +278,7 @@ def create_transform_status(request_id: str) -> TransformStatus:
     return TransformStatus(
         **{
             "request_id": request_id,
+            "did_id": 0,
             "minio_endpoint": "localhost",
             "minio_secured": False,
             "minio_access_key": "access_key",
