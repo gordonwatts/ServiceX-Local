@@ -50,7 +50,7 @@ class SXLocalAdaptor:
 
     async def _get_authorization(self):
         "Dummied out - we always have authorization"
-        
+
         pass
 
     async def get_transforms(self) -> List[TransformStatus]:
