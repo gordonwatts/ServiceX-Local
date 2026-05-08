@@ -4,7 +4,7 @@ import json
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Generator, List
+from typing import Any, Generator, List, Optional
 
 from make_it_sync import make_sync
 from servicex import General, ResultDestination, Sample, ServiceXSpec
@@ -104,55 +104,91 @@ async def deliver_async(
     spec: ServiceXSpec,
     adaptor: SXLocalAdaptor,
     ignore_local_cache: bool = False,
+    download_path: Optional[str] = None,
     **kwargs,
 ) -> dict[str, GuardList] | None:
+    """Run a ServiceX spec locally and return GuardList results per sample.
 
+    Args:
+        spec: The ServiceXSpec describing samples and queries.
+        adaptor: An SXLocalAdaptor instance that will execute transforms.
+        ignore_local_cache: If True, bypass the on-disk cache and re-run.
+        download_path: Where transform result files should be written. If
+            ``None`` (default), a per-user temp directory is used. Must be an
+            absolute path — the working directory may change during execution.
+            Overrides ``adaptor.output_directory`` for this call only.
+    Returns:
+        Mapping of sample title to a GuardList of file URIs.
+    """
     results: dict[str, GuardList] = {}
     cache = _load_cache()  # Load cache from file system
 
-    # Run the samples one by one.
-    for tq in _sample_run_info(spec.General, spec.Sample):
-        cache_key = _generate_cache_key(tq)
+    # Per-call override of the adaptor's configured output directory. Restored
+    # in `finally` so the adaptor isn't permanently mutated. Guarded with
+    # getattr so mocks/stubs lacking the attribute still work.
+    override_active = download_path is not None and hasattr(
+        adaptor, "output_directory"
+    )
+    if override_active:
+        previous_output_directory = adaptor.output_directory
+        adaptor.output_directory = Path(download_path)
 
-        if cache_key in cache and not ignore_local_cache:
-            info = cache[cache_key]
-            info["submit_time"] = datetime.fromisoformat(info["submit_time"])
-            info["finish_time"] = (
-                datetime.fromisoformat(info["finish_time"])
-                if info["finish_time"] is not None
-                else None
-            )
-            info = {
-                k.replace("_", "-") if k not in ("request_id", "did_id") else k: v
-                for k, v in info.items()
-            }
+    try:
+        # Run the samples one by one.
+        for tq in _sample_run_info(spec.General, spec.Sample):
+            cache_key = _generate_cache_key(tq)
 
-            status = TransformStatus(**info)
-        else:
-            # Do the transform and get status
-            request_id = await adaptor.submit_transform(tq)
-            status = await adaptor.get_transform_status(request_id)
-            info = status.model_dump()
-            info["submit_time"] = info["submit_time"].isoformat()
-            info["finish_time"] = (
-                info["finish_time"].isoformat()
-                if info["finish_time"] is not None
-                else None
-            )
+            if cache_key in cache and not ignore_local_cache:
+                info = cache[cache_key]
+                info["submit_time"] = datetime.fromisoformat(info["submit_time"])
+                info["finish_time"] = (
+                    datetime.fromisoformat(info["finish_time"])
+                    if info["finish_time"] is not None
+                    else None
+                )
+                info = {
+                    k.replace("_", "-") if k not in ("request_id", "did_id") else k: v
+                    for k, v in info.items()
+                }
 
-            cache[cache_key] = info
-            _save_cache(cache)  # Save cache to file system
+                status = TransformStatus(**info)
+                # Cache hit skipped submit_transform, so the registry wasn't
+                # populated. Register the path the adaptor would have used so
+                # MinioLocalAdaptor reads from the right place. Skip if the
+                # adaptor is a stub without the resolver (e.g. test mocks).
+                if hasattr(adaptor, "_resolve_output_directory"):
+                    MinioLocalAdaptor.register_output_directory(
+                        status.request_id,
+                        adaptor._resolve_output_directory(status.request_id),
+                    )
+            else:
+                # Do the transform and get status
+                request_id = await adaptor.submit_transform(tq)
+                status = await adaptor.get_transform_status(request_id)
+                info = status.model_dump()
+                info["submit_time"] = info["submit_time"].isoformat()
+                info["finish_time"] = (
+                    info["finish_time"].isoformat()
+                    if info["finish_time"] is not None
+                    else None
+                )
 
-        # Build the list of results.
-        minio_results = MinioLocalAdaptor.for_transform(status)
-        files = [
-            await minio_results.get_signed_url(n.filename)
-            for n in await minio_results.list_bucket()
-        ]
-        outputs = GuardList(files)
+                cache[cache_key] = info
+                _save_cache(cache)  # Save cache to file system
 
-        title = tq.title if tq.title is not None else "local-run-dataset"
-        results[title] = outputs
+            # Build the list of results.
+            minio_results = MinioLocalAdaptor.for_transform(status)
+            files = [
+                await minio_results.get_signed_url(n.filename)
+                for n in await minio_results.list_bucket()
+            ]
+            outputs = GuardList(files)
+
+            title = tq.title if tq.title is not None else "local-run-dataset"
+            results[title] = outputs
+    finally:
+        if override_active:
+            adaptor.output_directory = previous_output_directory
 
     return results
 

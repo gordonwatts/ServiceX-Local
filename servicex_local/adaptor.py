@@ -41,12 +41,33 @@ class SXLocalAdaptor:
         science_runner: BaseScienceImage,
         codegen_name: str,
         url: str,
+        output_directory: Optional[Path] = None,
     ):
+        """
+        Args:
+            output_directory: Where transform result files (the files the user
+                will download) should be written. If ``None`` (default), a
+                per-user temp directory is used. Codegen and other internal
+                build artifacts are always kept in hidden temp space.
+        """
         self.codegen = codegen
         self.science_runner = science_runner
         self.codegen_name = codegen_name
         self.url = url
+        self.output_directory = (
+            Path(output_directory) if output_directory is not None else None
+        )
         self.transform_status_store: Dict[str, TransformStatus] = {}
+
+    def _resolve_output_directory(self, request_id: str) -> Path:
+        """Per-request output dir: user-configured root, else temp default."""
+        if self.output_directory is not None:
+            return self.output_directory / request_id
+        return (
+            Path(tempfile.gettempdir())
+            / f"servicex_{getpass.getuser()}"
+            / request_id
+        )
 
     async def _get_authorization(self):
         "Dummied out - we always have authorization"
@@ -153,13 +174,11 @@ class SXLocalAdaptor:
                 # Make sure all files have proper line endings
                 _rewrite_sh_files(generated_files_dir)
 
-                # Create a unique directory for the output files directly under
-                # the temp directory
-                output_directory: Path = (
-                    Path(tempfile.gettempdir())
-                    / f"servicex_{getpass.getuser()}/{request_id}"
-                )
+                output_directory = self._resolve_output_directory(request_id)
                 output_directory.mkdir(parents=True, exist_ok=True)
+                MinioLocalAdaptor.register_output_directory(
+                    request_id, output_directory
+                )
 
                 # Run the science image to perform the transformation
                 input_files = transform_request.file_list
@@ -215,6 +234,12 @@ class SXLocalAdaptor:
 
 
 class MinioLocalAdaptor:
+    # Class-level registry: request_id -> directory holding that transform's
+    # result files. Populated by SXLocalAdaptor.submit_transform so any
+    # MinioLocalAdaptor instance built later (via for_transform) can find
+    # where the files actually live.
+    _output_dirs: Dict[str, Path] = {}
+
     def __init__(self, bucket: str, **kwargs):
         self.request_id = bucket
 
@@ -228,11 +253,21 @@ class MinioLocalAdaptor:
             bucket=transform.request_id,
         )
 
-    async def list_bucket(self) -> List[ResultFile]:
-        output_directory: Path = (
+    @classmethod
+    def register_output_directory(cls, request_id: str, path: Path) -> None:
+        cls._output_dirs[request_id] = Path(path)
+
+    def _get_output_directory(self) -> Path:
+        registered = self._output_dirs.get(self.request_id)
+        if registered is not None:
+            return registered
+        return (
             Path(tempfile.gettempdir())
             / f"servicex_{getpass.getuser()}/{self.request_id}"
         )
+
+    async def list_bucket(self) -> List[ResultFile]:
+        output_directory = self._get_output_directory()
         result_files = []
         for file_path in output_directory.glob("*"):
             if file_path.is_file():
@@ -249,10 +284,7 @@ class MinioLocalAdaptor:
     async def download_file(
         self, object_name: str, local_dir: str, shorten_filename: bool = False
     ) -> Path:
-        output_directory: Path = (
-            Path(tempfile.gettempdir())
-            / f"servicex_{getpass.getuser()}/{self.request_id}"
-        )
+        output_directory = self._get_output_directory()
         source_path = output_directory / object_name
         destination_path = Path(local_dir) / object_name
 
@@ -267,10 +299,7 @@ class MinioLocalAdaptor:
         return destination_path.resolve()
 
     async def get_signed_url(self, object_name: str) -> str:
-        output_directory: Path = (
-            Path(tempfile.gettempdir())
-            / f"servicex_{getpass.getuser()}/{self.request_id}"
-        )
+        output_directory = self._get_output_directory()
         file_path = output_directory / object_name
 
         if not file_path.exists():
