@@ -154,8 +154,9 @@ async def deliver_async(
 
         # Build the list of results.
         minio_results = MinioLocalAdaptor.for_transform(status)
+        download_dir = adaptor.cache_dir / status.request_id
         files = [
-            await minio_results.get_signed_url(n.filename)
+            await minio_results.download_file(n.filename, download_dir)
             for n in await minio_results.list_bucket()
         ]
         outputs = GuardList(files)

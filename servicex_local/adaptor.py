@@ -243,14 +243,14 @@ class MinioLocalAdaptor:
         return result_files
 
     async def download_file(
-        self, object_name: str, local_dir: str, shorten_filename: bool = False
+        self, object_name: str, local_dir: Path, shorten_filename: bool = False
     ) -> Path:
         output_directory: Path = (
             Path(tempfile.gettempdir())
             / f"servicex_{getpass.getuser()}/{self.request_id}"
         )
         source_path = output_directory / object_name
-        destination_path = Path(local_dir) / object_name
+        destination_path = local_dir / object_name
 
         if not source_path.exists():
             raise FileNotFoundError(
