@@ -39,12 +39,11 @@ class SXLocalAdaptor:
         self,
         codegen: SXCodeGen,
         science_runner: BaseScienceImage,
-        codegen_name: str,
+        cache_dir: Path,
         url: str,
     ):
         self.codegen = codegen
         self.science_runner = science_runner
-        self.codegen_name = codegen_name
         self.url = url
         self.transform_status_store: Dict[str, TransformStatus] = {}
 
@@ -59,10 +58,6 @@ class SXLocalAdaptor:
         raise NotImplementedError(
             "get_transforms is not implemented for SXLocalAdaptor"
         )
-
-    def get_code_generators(self) -> Dict[str, List[str]]:
-        # Return the code generator name provided during initialization
-        return {self.codegen_name: []}
 
     async def get_datasets(
         self,

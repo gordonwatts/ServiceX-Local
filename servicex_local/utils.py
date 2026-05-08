@@ -117,9 +117,27 @@ def install_sx_local(
     Returns:
         Tuple[str, SXLocalAdaptor]: Codegen name, adaptor.
     """
-    from servicex_local import LocalXAODCodegen, SXLocalAdaptor
+    from pathlib import Path
 
-    codegen_name = "local"
+    from servicex_local import LocalXAODCodegen, SXLocalAdaptor
+    from servicex.configuration import Configuration
+
+    # TODO: Add a test to make sure this returns the right directory.
+    # TODO: Add test for what happens with no servicex.yaml
+    try:
+        sx_cfg = Configuration.read()
+        cache_dir = Path(sx_cfg.cache_path).resolve()
+        
+        logging.debug(f"Read ServiceX configuration: {sx_cfg}")
+        logging.debug(f"Using cache location: {cache_dir}")
+    except NameError:
+        import tempfile
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cache_dir = Path(temp_dir).resolve()
+            logging.warning(f"Could not read a ServiceX.yaml. Using temporary directory for cache: {cache_dir}")
+            
+
     codegen = LocalXAODCodegen()
 
     if platform == Platform.docker:
@@ -142,8 +160,8 @@ def install_sx_local(
         raise ValueError(f"Unknown platform {platform}")
 
     adaptor = SXLocalAdaptor(
-        codegen, science_runner, codegen_name, f"http://localhost:{host_port}"
+        codegen, science_runner, f"http://localhost:{host_port}", cache_dir
     )
 
-    logging.info("Using local ServiceX endpoint: codegen %s", codegen_name)
-    return codegen_name, adaptor
+    logging.info(f"Using local ServiceX endpoint: {codegen}")
+    return adaptor
