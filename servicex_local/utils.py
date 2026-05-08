@@ -122,18 +122,17 @@ def install_sx_local(
     from servicex_local import LocalXAODCodegen, SXLocalAdaptor
     from servicex.configuration import Configuration
 
-    # TODO: Add a test to make sure this returns the right directory.
-    # TODO: Add test for what happens with no servicex.yaml
     try:
         sx_cfg = Configuration.read()
         cache_dir = Path(sx_cfg.cache_path).resolve()
     except NameError:
         import tempfile
-        
-        with tempfile.TemporaryDirectory() as temp_dir:
-            cache_dir = Path(temp_dir).resolve()
-            logging.warning(f"Could not read a ServiceX.yaml. Using temporary directory for cache.")
-            
+
+        cache_dir = Path(tempfile.mkdtemp()).resolve()
+        logging.warning(
+            "Could not read a ServiceX.yaml. Using temporary directory %s for cache.",
+            cache_dir,
+        )
 
     codegen = LocalXAODCodegen()
 

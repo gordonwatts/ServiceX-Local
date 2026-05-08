@@ -38,15 +38,19 @@ def restore_cache():
         cache_file.unlink()
 
 
-@pytest.fixture
-def simple_adaptor():
+def _make_adaptor(cache_dir: Path):
+    """Build a minimal in-memory adaptor whose cache_dir is configurable.
+
+    submit_transform writes a fake output file to the location MinioLocalAdaptor
+    reads from (``tempfile.gettempdir() / servicex_<user> / <request_id>``),
+    so MinioLocalAdaptor.list_bucket / download_file work end-to-end.
+    """
+
     class my_adaptor:
         def __init__(self):
             self._request_id = None
             self._submit_called = 0
-            self.cache_dir = (
-                Path(tempfile.gettempdir()) / f"servicex_{getpass.getuser()}"
-            )
+            self.cache_dir = cache_dir
 
         @property
         def submit_called(self):
@@ -94,6 +98,12 @@ def simple_adaptor():
             )
 
     return my_adaptor()
+
+
+@pytest.fixture
+def simple_adaptor():
+    cache_dir = Path(tempfile.gettempdir()) / f"servicex_{getpass.getuser()}"
+    return _make_adaptor(cache_dir)
 
 
 def test_deliver_spec_simple(simple_adaptor):
@@ -189,3 +199,52 @@ def test_deliver_spec_simple_cache_ignore(simple_adaptor):
 
 
 # test for warning for extra arguments that aren't known.
+
+
+def test_deliver_writes_cache_to_adaptor_cache_dir(tmp_path):
+    "deliver() writes cache.json into adaptor.cache_dir, not a hardcoded path."
+    adaptor = _make_adaptor(tmp_path)
+
+    spec = ServiceXSpec(
+        General=General(),
+        Sample=[
+            Sample(
+                Name="test_me",
+                Dataset=dataset.FileList("test.root"),
+                Query="query1",
+            )
+        ],
+    )
+
+    deliver(spec, adaptor=adaptor)
+
+    assert (tmp_path / "cache.json").exists()
+
+
+def test_deliver_downloads_files_to_cache_dir(tmp_path):
+    "deliver() returns paths under adaptor.cache_dir/<request_id>, not file:// URIs."
+    adaptor = _make_adaptor(tmp_path)
+
+    spec = ServiceXSpec(
+        General=General(),
+        Sample=[
+            Sample(
+                Name="test_me",
+                Dataset=dataset.FileList("test.root"),
+                Query="query1",
+            )
+        ],
+    )
+
+    r = deliver(spec, adaptor=adaptor)
+    assert r is not None
+    files = r["test_me"]
+    assert len(files) == 1
+
+    downloaded = Path(files[0])
+    assert downloaded.exists()
+    # The download must live under the per-request subdir of the adaptor's
+    # cache_dir, and it must be a real path (not a file:// URI string).
+    assert not str(downloaded).startswith("file://")
+    expected_dir = tmp_path / adaptor._request_id
+    assert downloaded.parent == expected_dir.resolve()

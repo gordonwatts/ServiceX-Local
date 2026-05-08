@@ -22,6 +22,16 @@ def test_adaptor_url():
     assert adaptor.url == url
 
 
+def test_adaptor_cache_dir_namespaced_by_user(tmp_path):
+    "The adaptor namespaces the supplied cache_dir with servicex_<user>."
+    codegen = MagicMock()
+    science_runner = MagicMock()
+
+    adaptor = SXLocalAdaptor(codegen, science_runner, tmp_path, "http://localhost:5000")
+
+    assert adaptor.cache_dir == tmp_path / f"servicex_{getpass.getuser()}"
+
+
 @pytest.mark.asyncio
 async def test_adaptor_submit_transform_one_file(
     science_runner_one_txt_file: MagicMock,
