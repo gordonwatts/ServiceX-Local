@@ -70,7 +70,7 @@ def test_find_dataset(fs, input_path, prefer_local, expected_local, fs_file):
     ],
 )
 def test_install_sx_local(monkeypatch, image, platform, expected_class):
-    codegen_name, adaptor = install_sx_local(image, platform)
+    adaptor = install_sx_local(image, platform)
     assert isinstance(adaptor.science_runner, expected_class)
 
 

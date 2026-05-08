@@ -17,7 +17,7 @@ def test_adaptor_url():
     codegen = MagicMock()
     science_runner = MagicMock()
     url = "http://localhost:5000"
-    adaptor = SXLocalAdaptor(codegen, science_runner, "mock_codegen", url)
+    adaptor = SXLocalAdaptor(codegen, science_runner, Path(tempfile.gettempdir()), url)
 
     assert adaptor.url == url
 
@@ -36,7 +36,7 @@ async def test_adaptor_submit_transform_one_file(
     adaptor = SXLocalAdaptor(
         mock_codegen,
         science_runner_one_txt_file,
-        "mock_codegen",
+        Path(tempfile.gettempdir()),
         "http://localhost:5000",
     )
 
@@ -167,7 +167,7 @@ async def test_adaptor_submit_transform_line_endings(
     adaptor = SXLocalAdaptor(
         code_gen_one_windows_file,
         science_runner_one_txt_file,
-        "mock_codegen",
+        Path(tempfile.gettempdir()),
         "http://localhost:5000",
     )
 
@@ -200,7 +200,7 @@ async def test_adaptor_saved_code_on_no_error(
     adaptor = SXLocalAdaptor(
         code_gen_one_file,
         science_runner_one_txt_file,
-        "mock_codegen",
+        Path(tempfile.gettempdir()),
         "http://localhost:5000",
     )
 
@@ -236,7 +236,7 @@ async def test_adaptor_saved_code_on_error(
     adaptor = SXLocalAdaptor(
         code_gen_error,
         science_runner_one_txt_file,
-        "mock_codegen",
+        Path(tempfile.gettempdir()),
         "http://localhost:5000",
     )
 
@@ -341,7 +341,7 @@ async def test_minio_download_file():
 
     # Call download_file and verify the result
     local_dir = Path(tempfile.gettempdir()) / "local_dir"
-    downloaded_file = await adaptor.download_file("file1.txt", str(local_dir))
+    downloaded_file = await adaptor.download_file("file1.txt", local_dir)
     assert downloaded_file.exists()
     assert downloaded_file.read_text() == "content1"
 
