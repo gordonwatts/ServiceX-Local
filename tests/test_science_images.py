@@ -88,13 +88,14 @@ def prepare_input_files(
             ["https://root.ch/file1"],
             "sslhep/servicex_func_adl_uproot_transformer:uproot5",
         ),
-        (
+        pytest.param(
             "./tests/genfiles_raw/query2_bash",
             [
                 "root://fax.mwt2.org:1094//pnfs/uchicago.edu/atlaslocalgroupdisk/"
                 "rucio/user.mgeyik/e7/ee/user.mgeyik.30182995._000093.out.root"
             ],
             "sslhep/servicex_func_adl_uproot_transformer:uproot5",
+            marks=pytest.mark.grid,
         ),
     ],
 )
@@ -165,13 +166,14 @@ def test_docker_science(
             ["https://root.ch/file1"],
             "docker://sslhep/servicex_func_adl_uproot_transformer:uproot5",
         ),
-        (
+        pytest.param(
             "./tests/genfiles_raw/query2_bash",
             [
                 "root://fax.mwt2.org:1094//pnfs/uchicago.edu/atlaslocalgroupdisk/"
                 "rucio/user.mgeyik/e7/ee/user.mgeyik.30182995._000093.out.root"
             ],
             "docker://sslhep/servicex_func_adl_uproot_transformer:uproot5",
+            marks=pytest.mark.grid,
         ),
     ],
 )
@@ -294,7 +296,7 @@ def test_singularity_science_log_warnings(tmp_path, caplog, request):
             "24.2.41",
             "atlas_al9",
         ),
-        (
+        pytest.param(
             "./tests/genfiles_raw/query2_bash",
             [
                 "root://fax.mwt2.org:1094//pnfs/uchicago.edu/atlaslocalgroupdisk/"
@@ -302,6 +304,7 @@ def test_singularity_science_log_warnings(tmp_path, caplog, request):
             ],
             "24.2.41",
             "atlas_al9",
+            marks=pytest.mark.grid,
         ),
         (
             "./tests/genfiles_raw/query2_bash",
