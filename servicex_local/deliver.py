@@ -1,7 +1,5 @@
-import getpass
 import hashlib
 import json
-import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Generator, List
@@ -71,32 +69,41 @@ def _generate_cache_key(tq: TransformRequest) -> str:
     return hashlib.md5(key.encode()).hexdigest()
 
 
-CACHE_DIR: Path = Path(tempfile.gettempdir()) / f"servicex_{getpass.getuser()}"
-CACHE_FILE: Path = CACHE_DIR / "cache.json"
+def _get_cache_file(cache_dir: Path) -> Path:
+    """
+    Get the path to the cache file.
+
+    Args:
+        cache_dir (Path): The directory where the cache file is stored.
+    Returns:
+        Path: The path to the cache file.
+    """
+    return cache_dir / "cache.json"
 
 
-def _load_cache() -> dict[str, Any]:
+def _load_cache(cache_dir: Path) -> dict[str, Any]:
     """
     Load the cache from the file system.
 
     Returns:
         dict[str, Any]: The cache dictionary.
     """
-    if not CACHE_FILE.exists():
+    if not _get_cache_file(cache_dir).exists():
         return {}
-    with CACHE_FILE.open("r") as f:
+    with _get_cache_file(cache_dir).open("r") as f:
         return json.load(f)
 
 
-def _save_cache(cache: dict[str, Any]) -> None:
+def _save_cache(cache: dict[str, Any], cache_dir: Path) -> None:
     """
     Save the cache to the file system.
 
     Args:
         cache (dict[str, Any]): The cache dictionary.
+        cache_dir (Path): The directory where the cache file is stored.
     """
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    with CACHE_FILE.open("w") as f:
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    with _get_cache_file(cache_dir).open("w") as f:
         json.dump(cache, f)
 
 
@@ -108,7 +115,7 @@ async def deliver_async(
 ) -> dict[str, GuardList] | None:
 
     results: dict[str, GuardList] = {}
-    cache = _load_cache()  # Load cache from file system
+    cache = _load_cache(adaptor.cache_dir)  # Load cache from file system
 
     # Run the samples one by one.
     for tq in _sample_run_info(spec.General, spec.Sample):
@@ -141,12 +148,13 @@ async def deliver_async(
             )
 
             cache[cache_key] = info
-            _save_cache(cache)  # Save cache to file system
+            _save_cache(cache, adaptor.cache_dir)
 
         # Build the list of results.
         minio_results = MinioLocalAdaptor.for_transform(status)
+        download_dir = adaptor.cache_dir / status.request_id
         files = [
-            await minio_results.get_signed_url(n.filename)
+            await minio_results.download_file(n.filename, download_dir)
             for n in await minio_results.list_bucket()
         ]
         outputs = GuardList(files)

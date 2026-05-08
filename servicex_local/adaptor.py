@@ -39,18 +39,18 @@ class SXLocalAdaptor:
         self,
         codegen: SXCodeGen,
         science_runner: BaseScienceImage,
-        codegen_name: str,
+        cache_dir: Path,
         url: str,
     ):
         self.codegen = codegen
         self.science_runner = science_runner
-        self.codegen_name = codegen_name
+        self.cache_dir = cache_dir / f"servicex_{getpass.getuser()}"
         self.url = url
         self.transform_status_store: Dict[str, TransformStatus] = {}
 
     async def _get_authorization(self):
         "Dummied out - we always have authorization"
-        # TODO: Why is this method start with a `_`?
+
         pass
 
     async def get_transforms(self) -> List[TransformStatus]:
@@ -59,10 +59,6 @@ class SXLocalAdaptor:
         raise NotImplementedError(
             "get_transforms is not implemented for SXLocalAdaptor"
         )
-
-    def get_code_generators(self) -> Dict[str, List[str]]:
-        # Return the code generator name provided during initialization
-        return {self.codegen_name: []}
 
     async def get_datasets(
         self,
@@ -247,14 +243,14 @@ class MinioLocalAdaptor:
         return result_files
 
     async def download_file(
-        self, object_name: str, local_dir: str, shorten_filename: bool = False
+        self, object_name: str, local_dir: Path, shorten_filename: bool = False
     ) -> Path:
         output_directory: Path = (
             Path(tempfile.gettempdir())
             / f"servicex_{getpass.getuser()}/{self.request_id}"
         )
         source_path = output_directory / object_name
-        destination_path = Path(local_dir) / object_name
+        destination_path = local_dir / object_name
 
         if not source_path.exists():
             raise FileNotFoundError(
