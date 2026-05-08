@@ -27,6 +27,7 @@ classifiers = [
 ]
 dependencies = [
     "servicex>=3.0.0",
+    "servicex_analysis_utils>=1.2.0a0",
     "tenacity",
     "requests-toolbelt",
     "click",
