@@ -127,15 +127,12 @@ def install_sx_local(
     try:
         sx_cfg = Configuration.read()
         cache_dir = Path(sx_cfg.cache_path).resolve()
-        
-        logging.debug(f"Read ServiceX configuration: {sx_cfg}")
-        logging.debug(f"Using cache location: {cache_dir}")
     except NameError:
         import tempfile
         
         with tempfile.TemporaryDirectory() as temp_dir:
             cache_dir = Path(temp_dir).resolve()
-            logging.warning(f"Could not read a ServiceX.yaml. Using temporary directory for cache: {cache_dir}")
+            logging.warning(f"Could not read a ServiceX.yaml. Using temporary directory for cache.")
             
 
     codegen = LocalXAODCodegen()
@@ -160,8 +157,9 @@ def install_sx_local(
         raise ValueError(f"Unknown platform {platform}")
 
     adaptor = SXLocalAdaptor(
-        codegen, science_runner, f"http://localhost:{host_port}", cache_dir
+        codegen, science_runner, cache_dir, f"http://localhost:{host_port}"
     )
 
     logging.info(f"Using local ServiceX endpoint: {codegen}")
+    logging.info(f"Cache being save to; {adaptor.cache_dir}")
     return adaptor

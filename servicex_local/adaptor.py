@@ -44,12 +44,13 @@ class SXLocalAdaptor:
     ):
         self.codegen = codegen
         self.science_runner = science_runner
+        self.cache_dir = cache_dir / f"servicex_{getpass.getuser()}"
         self.url = url
         self.transform_status_store: Dict[str, TransformStatus] = {}
 
     async def _get_authorization(self):
         "Dummied out - we always have authorization"
-        # TODO: Why is this method start with a `_`?
+        
         pass
 
     async def get_transforms(self) -> List[TransformStatus]:
