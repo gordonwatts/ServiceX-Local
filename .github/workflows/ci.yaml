@@ -35,39 +35,22 @@ jobs:
         if: runner.os == 'macOS'
         uses: docker/setup-docker-action@v4
 
-      - name: Install Docker Desktop (Windows)
+      - name: Switch Docker to Linux containers (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          choco install docker-desktop --no-progress -y --ignore-package-exit-codes
-
-      - name: Start Docker Desktop and wait for daemon (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $exe = 'C:\Program Files\Docker\Docker\Docker Desktop.exe'
-          if (-not (Test-Path $exe)) {
-            Write-Error "Docker Desktop install did not produce $exe"
-            exit 1
+          # Hosted windows-latest runners ship dockerd in Windows containers mode.
+          # Try the Docker Desktop switch first; if it isn't installed, fall back
+          # to re-registering dockerd. Linux containers on Windows ultimately
+          # require WSL2 + Docker Desktop, so this step may still fail.
+          $cli = 'C:\Program Files\Docker\Docker\DockerCli.exe'
+          if (Test-Path $cli) {
+            & $cli -SwitchLinuxEngine
+          } else {
+            Write-Host "DockerCli.exe not found; Docker Desktop is not installed on this runner."
+            Write-Host "Linux containers are unlikely to work without Docker Desktop + WSL2."
           }
-          Start-Process $exe -ArgumentList '--quit-after-install','--accept-license' -Verb runAs
-          Start-Process $exe -Verb runAs
-
-          # Poll until the daemon answers (Docker Desktop initialises WSL2 + Linux engine on first run).
-          $deadline = (Get-Date).AddMinutes(10)
-          while ((Get-Date) -lt $deadline) {
-            docker version 2>$null
-            if ($LASTEXITCODE -eq 0) {
-              Write-Host "Docker daemon is up."
-              break
-            }
-            Start-Sleep -Seconds 10
-          }
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Docker daemon did not become ready in time"
-            exit 1
-          }
-          docker info
+          docker version
 
       - name: Install Apptainer (Ubuntu)
         if: runner.os == 'Linux'
