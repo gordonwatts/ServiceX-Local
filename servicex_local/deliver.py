@@ -196,5 +196,8 @@ def local_deliver(
     )
 
     if config.awk:
-        return to_awk(sx_result)["MySample"]
+        awk_result = to_awk(sx_result)
+        if len(spec.Sample) == 1:
+            return awk_result[spec.Sample[0].Name]
+        return awk_result
     return sx_result
