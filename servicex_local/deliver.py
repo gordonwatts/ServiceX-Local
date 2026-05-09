@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Generator, List
@@ -113,6 +114,23 @@ async def deliver_async(
     ignore_local_cache: bool = False,
     **kwargs,
 ) -> dict[str, GuardList] | None:
+
+    _IGNORED_KWARGS = {
+        "config_path",
+        "servicex_name",
+        "return_exceptions",
+        "fail_if_incomplete",
+        "progress_bar",
+        "concurrency",
+        "cache_dir",
+    }
+    ignored = _IGNORED_KWARGS.intersection(kwargs)
+    if ignored:
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            "The following arguments are ignored in servicex-local: %s",
+            ", ".join(sorted(ignored)),
+        )
 
     results: dict[str, GuardList] = {}
     cache = _load_cache(adaptor.cache_dir)  # Load cache from file system
