@@ -8,7 +8,7 @@ def log_to_file(log_file):
         def wrapper(*args, **kwargs):
             logger = logging.getLogger()
             original_logging_level = logger.level
-            logger.setLevel(logging.DEBUG)
+            logger.setLevel(logging.INFO)
 
             handler = logging.FileHandler(log_file, mode="a")  # Append mode
             formatter = logging.Formatter(
