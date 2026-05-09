@@ -51,7 +51,7 @@ def run_command_with_logging(command: List[str], log_file: Path) -> None:
                 logger.warning(stripped_line)
                 emitted_level = logging.WARNING
             else:
-                logger.debug(stripped_line)
+                logger.info(stripped_line)
 
             emit_next_line_level = None
             if stripped_line.endswith(":"):
