@@ -1,16 +1,22 @@
 import getpass
-import os
 import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
-from servicex import General, ResultDestination, Sample, ServiceXSpec, dataset
-from servicex.models import ResultFormat, Status, TransformRequest, TransformStatus
-from servicex.query_core import QueryStringGenerator
+from servicex import General, Sample, ServiceXSpec, dataset
+from servicex.models import (
+    ResultDestination,
+    ResultFormat,
+    Status,
+    TransformRequest,
+    TransformStatus,
+)
 
-from servicex_local import deliver
+from servicex_local import local_deliver
+from servicex_local.configurations import Config
 
 
 @pytest.fixture(autouse=True)
@@ -41,9 +47,8 @@ def restore_cache():
 def _make_adaptor(cache_dir: Path):
     """Build a minimal in-memory adaptor whose cache_dir is configurable.
 
-    submit_transform writes a fake output file to the location MinioLocalAdaptor
-    reads from (``tempfile.gettempdir() / servicex_<user> / <request_id>``),
-    so MinioLocalAdaptor.list_bucket / download_file work end-to-end.
+    submit_transform writes a fake output file to the location
+    MinioLocalAdaptor reads from, so the full deliver flow works end-to-end.
     """
 
     class my_adaptor:
@@ -101,150 +106,122 @@ def _make_adaptor(cache_dir: Path):
 
 
 @pytest.fixture
-def simple_adaptor():
-    cache_dir = Path(tempfile.gettempdir()) / f"servicex_{getpass.getuser()}"
-    return _make_adaptor(cache_dir)
+def fake_install(tmp_path):
+    """Patch install_sx_local so local_deliver gets a stub adaptor.
 
-
-def test_deliver_spec_simple(simple_adaptor):
-    "Test a simple deliver that should work"
-
-    spec = ServiceXSpec(
-        General=General(),
-        Sample=[
-            Sample(
-                Name="test_me",
-                Dataset=dataset.FileList("test.root"),
-                Query="query1",
-            )
-        ],
-    )
-
-    r = deliver(spec, adaptor=simple_adaptor)
-    assert r is not None
-    assert len(r) == 1
-    assert "test_me" in r
-    files = r["test_me"]
-    assert len(files) == 1
-    local_path = Path(files[0])
-    assert os.path.exists(local_path)
-
-
-def test_deliver_spec_q_string_generator(simple_adaptor):
-    "Test a simple deliver that should work"
-
-    class my_string_query(QueryStringGenerator):
-        def generate_selection_string(self) -> str:
-            return "query1"
-
-    spec = ServiceXSpec(
-        General=General(),
-        Sample=[
-            Sample(
-                Name="test_me",
-                Dataset=dataset.FileList("test.root"),
-                Query=my_string_query(),
-            )
-        ],
-    )
-
-    r = deliver(spec, adaptor=simple_adaptor)
-    assert r is not None
-    assert len(r) == 1
-    assert "test_me" in r
-    files = r["test_me"]
-    assert len(files) == 1
-    local_path = Path(files[0])
-    assert os.path.exists(local_path)
-
-
-def test_deliver_spec_simple_cache_hit(simple_adaptor):
-    "Test a simple deliver that should work"
-
-    spec = ServiceXSpec(
-        General=General(),
-        Sample=[
-            Sample(
-                Name="test_me",
-                Dataset=dataset.FileList("test.root"),
-                Query="query1",
-            )
-        ],
-    )
-
-    deliver(spec, adaptor=simple_adaptor)
-    deliver(spec, adaptor=simple_adaptor)
-
-    assert simple_adaptor.submit_called == 1
-
-
-def test_deliver_spec_simple_cache_ignore(simple_adaptor):
-    "Test a simple deliver that should work"
-
-    spec = ServiceXSpec(
-        General=General(),
-        Sample=[
-            Sample(
-                Name="test_me",
-                Dataset=dataset.FileList("test.root"),
-                Query="query1",
-            )
-        ],
-    )
-
-    deliver(spec, adaptor=simple_adaptor)
-    deliver(spec, adaptor=simple_adaptor, ignore_local_cache=True)
-
-    assert simple_adaptor.submit_called == 2
-
-
-# test for warning for extra arguments that aren't known.
-
-
-def test_deliver_writes_cache_to_adaptor_cache_dir(tmp_path):
-    "deliver() writes cache.json into adaptor.cache_dir, not a hardcoded path."
+    Yields (adaptor, captured) where ``captured`` records the args
+    install_sx_local was invoked with.
+    """
     adaptor = _make_adaptor(tmp_path)
+    captured: dict = {}
 
-    spec = ServiceXSpec(
+    def fake_install_sx_local(image, platform):
+        captured["image"] = image
+        captured["platform"] = platform
+        return adaptor
+
+    with patch(
+        "servicex_local.deliver.install_sx_local", fake_install_sx_local
+    ):
+        yield adaptor, captured
+
+
+def _spec():
+    return ServiceXSpec(
         General=General(),
         Sample=[
             Sample(
-                Name="test_me",
+                Name="MySample",
                 Dataset=dataset.FileList("test.root"),
                 Query="query1",
             )
         ],
     )
 
-    deliver(spec, adaptor=adaptor)
 
-    assert (tmp_path / "cache.json").exists()
+def test_local_deliver_docker_image_string(fake_install):
+    "docker platform passes a bare image:version to install_sx_local."
+    _, captured = fake_install
+    config = Config(version="25.2.41", platform="docker")
 
+    r = local_deliver(_spec(), config)
 
-def test_deliver_downloads_files_to_cache_dir(tmp_path):
-    "deliver() returns paths under adaptor.cache_dir/<request_id>, not file:// URIs."
-    adaptor = _make_adaptor(tmp_path)
-
-    spec = ServiceXSpec(
-        General=General(),
-        Sample=[
-            Sample(
-                Name="test_me",
-                Dataset=dataset.FileList("test.root"),
-                Query="query1",
-            )
-        ],
-    )
-
-    r = deliver(spec, adaptor=adaptor)
     assert r is not None
-    files = r["test_me"]
-    assert len(files) == 1
+    assert "MySample" in r
+    assert (
+        captured["image"]
+        == "sslhep/servicex_func_adl_xaod_transformer:25.2.41"
+    )
 
-    downloaded = Path(files[0])
-    assert downloaded.exists()
-    # The download must live under the per-request subdir of the adaptor's
-    # cache_dir, and it must be a real path (not a file:// URI string).
-    assert not str(downloaded).startswith("file://")
-    expected_dir = tmp_path / adaptor._request_id
-    assert downloaded.parent == expected_dir.resolve()
+
+def test_local_deliver_singularity_image_string(fake_install):
+    "singularity platform prepends docker:// to the image string."
+    _, captured = fake_install
+    config = Config(version="25.2.41", platform="singularity")
+
+    local_deliver(_spec(), config)
+
+    assert (
+        captured["image"]
+        == "docker://sslhep/servicex_func_adl_xaod_transformer:25.2.41"
+    )
+
+
+def test_local_deliver_wsl2_image_string(fake_install):
+    "wsl2 platform uses the bare image:version string."
+    _, captured = fake_install
+    config = Config(version="25.2.41", platform="wsl2")
+
+    local_deliver(_spec(), config)
+
+    assert (
+        captured["image"]
+        == "sslhep/servicex_func_adl_xaod_transformer:25.2.41"
+    )
+
+
+def test_local_deliver_awk_false_returns_dict(fake_install):
+    "awk=False returns the deliver dict keyed by sample name."
+    config = Config(version="25.2.41", awk=False)
+
+    r = local_deliver(_spec(), config)
+
+    assert isinstance(r, dict)
+    assert "MySample" in r
+    assert len(r["MySample"]) == 1
+
+
+def test_local_deliver_awk_true_returns_awk_for_mysample(fake_install):
+    "awk=True returns the awkward-converted result for MySample."
+    config = Config(version="25.2.41", awk=True)
+
+    fake_awk = {"MySample": "awk_array_obj"}
+    with patch(
+        "servicex_local.deliver.to_awk", return_value=fake_awk
+    ) as mock_to_awk:
+        r = local_deliver(_spec(), config)
+
+    assert r == "awk_array_obj"
+    assert mock_to_awk.call_count == 1
+
+
+def test_local_deliver_ignore_cache_true_resubmits(fake_install):
+    "ignore_cache=True forces a re-submit on the second call."
+    adaptor, _captured = fake_install
+    config = Config(version="25.2.41", ignore_cache=True)
+
+    local_deliver(_spec(), config)
+    local_deliver(_spec(), config)
+
+    assert adaptor.submit_called == 2
+
+
+def test_local_deliver_ignore_cache_false_uses_cache(fake_install):
+    "ignore_cache=False reuses the cached transform on the second call."
+    adaptor, _captured = fake_install
+    config = Config(version="25.2.41", ignore_cache=False)
+
+    local_deliver(_spec(), config)
+    local_deliver(_spec(), config)
+
+    assert adaptor.submit_called == 1

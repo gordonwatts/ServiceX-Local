@@ -1,13 +1,6 @@
 import logging
-import os
-import re
 from enum import Enum
 from pathlib import Path
-from typing import Tuple, Union
-from urllib.parse import unquote, urlparse
-
-from servicex import dataset
-from servicex_analysis_utils import ds_type_resolver
 
 
 class Platform(Enum):
@@ -16,41 +9,6 @@ class Platform(Enum):
     docker = "docker"
     singularity = "singularity"
     wsl2 = "wsl2"
-
-
-def is_local_filelist(file_list: list[str], force_local: bool) -> bool:
-    """Check if the provided list of dataset names is valid.
-    Args:
-        file_list (list[str]): List of dataset names.
-        force_local (bool): Force local access. Used to
-        check if any of the files require local access.
-    Returns:
-        bool: True if the list is valid, False otherwise.
-    """
-    for ds in file_list:
-        if find_dataset(ds, not force_local)[1] is force_local:
-            return force_local
-    return not force_local
-
-
-def is_stored_locally(ds_name: str) -> bool:
-    """Check if the provided dataset name is a local file path.
-    Args:
-        ds_name (str): Dataset name.
-    Returns:
-        bool: True if the dataset is a local file path, False otherwise.
-    """
-    file = Path(ds_name).absolute()
-    if file.exists():
-        return True
-    if re.match(r"^file://", ds_name):
-        parsed_uri = urlparse(ds_name)
-        file_path = unquote(parsed_uri.path)
-        if os.name == "nt" and file_path.startswith("/"):
-            file_path = file_path[1:]
-        file = Path(file_path).absolute()
-        return True
-    return False
 
 
 def install_sx_local(

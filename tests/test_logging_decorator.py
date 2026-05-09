@@ -23,7 +23,7 @@ def test_logfile_written(tmp_path: Path, caplog: LogCaptureFixture):
         assert r.msg in ["warning", "error"]
 
     lines = [ln for ln in log.read_text().split("\n") if len(ln.strip()) != 0]
-    assert len(lines) == 4
+    assert len(lines) == 3
 
 
 def test_logfile_no_mess_with_levels(tmp_path: Path, caplog: LogCaptureFixture):

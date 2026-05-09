@@ -135,6 +135,8 @@ class DockerCodegen(SXCodeGen):
                     "--name",
                     container_name,
                     "-d",  # Run in detached mode
+                    "--platform",
+                    "linux/amd64",
                     "-v",
                     f"{directory}:/output",
                     "-p",
