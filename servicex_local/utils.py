@@ -66,6 +66,6 @@ def install_sx_local(
         codegen, science_runner, cache_dir, f"http://localhost:{host_port}"
     )
 
-    logging.info(f"Using local ServiceX endpoint: {codegen}")
-    logging.info(f"Cache being save to; {adaptor.cache_dir}")
+    logging.debug(f"Using local ServiceX endpoint: {codegen}")
+    logging.debug(f"Cache being save to; {adaptor.cache_dir}")
     return adaptor

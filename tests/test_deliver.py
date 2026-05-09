@@ -1,4 +1,5 @@
 import getpass
+import logging
 import tempfile
 import uuid
 from datetime import datetime
@@ -225,3 +226,48 @@ def test_local_deliver_ignore_cache_false_uses_cache(fake_install):
     local_deliver(_spec(), config)
 
     assert adaptor.submit_called == 1
+
+
+@pytest.fixture(autouse=True)
+def restore_root_logger():
+    "Snapshot and restore the root logger's level + handlers around every test."
+    root = logging.getLogger()
+    saved_level = root.level
+    saved_handlers = root.handlers[:]
+    try:
+        yield root
+    finally:
+        root.handlers[:] = saved_handlers
+        root.setLevel(saved_level)
+
+
+@pytest.mark.parametrize("level", ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+def test_config_logging_level_accepts_valid_names(level):
+    "Config accepts every name the logging framework recognises."
+    config = Config(version="25.2.41", logging_level=level)
+    assert config.logging_level == level
+
+
+def test_config_logging_level_rejects_invalid_string():
+    "Config rejects strings that aren't logging level names."
+    with pytest.raises(ValueError, match="logging_level"):
+        Config(version="25.2.41", logging_level="LOUD")
+
+
+def test_local_deliver_applies_logging_level_over_existing_handlers(
+    fake_install, restore_root_logger
+):
+    "local_deliver overrides a pre-configured root logger (force=True)."
+    root = restore_root_logger
+    root.handlers[:] = [logging.NullHandler()]
+    root.setLevel(logging.WARNING)
+
+    config = Config(version="25.2.41", logging_level="DEBUG")
+    local_deliver(_spec(), config)
+
+    assert root.level == logging.DEBUG
+
+
+def test_config_logging_level_default_is_info():
+    "Default logging_level is INFO (a recognised level name)."
+    assert Config(version="25.2.41").logging_level == "INFO"

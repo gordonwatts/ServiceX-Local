@@ -1,5 +1,6 @@
 import importlib
 import json
+import logging
 import urllib.request
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Union
@@ -27,10 +28,16 @@ class Config:
     platform: Union[Platform, str] = "docker"
     ignore_cache: bool = False
     awk: bool = False
+    logging_level: str = "INFO"
 
     def __post_init__(self):
         if isinstance(self.platform, str):
             self.platform = Platform[self.platform]
+        if self.logging_level not in logging._nameToLevel:
+            valid = sorted(logging._nameToLevel)
+            raise ValueError(
+                f"logging_level must be one of {valid}, got {self.logging_level!r}"
+            )
 
 
 @dataclass
