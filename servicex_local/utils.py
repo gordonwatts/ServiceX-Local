@@ -53,57 +53,6 @@ def is_stored_locally(ds_name: str) -> bool:
     return False
 
 
-def find_dataset(
-    ds_name: Union[str, list[str]], prefer_local: bool = False
-) -> Tuple[
-    Union[dataset.FileList, dataset.Rucio, dataset.XRootD, dataset.CERNOpenData], bool
-]:
-    """Determine the type of dataset based on the input
-    string and then return the ServiceX dataset object.
-        Also, indicate if it should be accessed locally.
-
-    Args:
-        ds_name (str): Name of the dataset to fetch.
-        prefer_local (bool): Prefer to run locally if possible.
-
-    Returns:
-        Tuple[dataset type, bool]: The dataset object and a flag indicating
-        if it should be accessed locally.
-    """
-
-    if isinstance(ds_name, list):
-        if is_local_filelist(ds_name, True):
-            return dataset.FileList(ds_name), True
-        if is_local_filelist(ds_name, False):
-            return dataset.FileList(ds_name), prefer_local
-        return dataset.FileList(ds_name), False
-
-    if is_stored_locally(ds_name):
-        return dataset.FileList([ds_name]), True
-
-    ds = ds_type_resolver(ds_name)
-
-    if isinstance(ds, dataset.Rucio):
-        return ds, False
-    if isinstance(ds, dataset.XRootD):
-        return ds, False
-    if isinstance(ds, dataset.CERNOpenData):
-        return ds, prefer_local
-    if isinstance(ds, dataset.FileList):
-        if re.match(r"^https?://", ds_name):
-            # Special case for CERNBox URLs
-            if not prefer_local:
-                parsed_url = urlparse(ds_name)
-                if (
-                    "cernbox.cern.ch" in parsed_url.netloc
-                    and parsed_url.path.startswith("/files/spaces")
-                ):
-                    return ds, False
-            return ds, prefer_local
-        if re.match(r"^root://", ds_name):
-            return ds, False
-
-
 def install_sx_local(
     image: str, platform: Platform = Platform.docker, host_port: int = 5001
 ):

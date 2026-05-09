@@ -13,6 +13,13 @@ from servicex.servicex_client import GuardList
 from servicex_local import SXLocalAdaptor
 from servicex_local.adaptor import MinioLocalAdaptor
 
+from func_adl import ObjectStream
+from .configurations import Config
+
+from servicex_local.utils import install_sx_local
+from servicex_local.utils import Platform as _SxPlatform
+from servicex_analysis_utils import to_awk
+
 
 def _sample_run_info(
     g: General, samples: List[Sample]
@@ -165,4 +172,26 @@ async def deliver_async(
     return results
 
 
-deliver = make_sync(deliver_async)
+_DOCKER_IMAGE = "sslhep/servicex_func_adl_xaod_transformer"
+
+
+def local_deliver(
+    spec: ServiceXSpec,
+    config: Config,
+):
+    """Run a query against a dataset, either locally or remotely."""
+
+    if(config.platform.value == "singularity"):
+        image = f"docker://{_DOCKER_IMAGE}:{config.version}"
+    else:
+        image = f"{_DOCKER_IMAGE}:{config.version}"
+    sx_platform = _SxPlatform(config.platform.value)
+    adaptor = install_sx_local(image, sx_platform)
+
+    sx_result = make_sync(deliver_async(
+        spec, adaptor=adaptor, ignore_local_cache=config.ignore_cache
+    ))
+
+    if config.awk:
+        return to_awk(sx_result)["MySample"]
+    return sx_result
