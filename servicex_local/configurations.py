@@ -28,7 +28,7 @@ class Config:
     platform: Union[Platform, str] = "docker"
     ignore_cache: bool = False
     awk: bool = False
-    logging_level: str = "INFO"
+    logging_level: str = "WARNING"
 
     def __post_init__(self):
         if isinstance(self.platform, str):

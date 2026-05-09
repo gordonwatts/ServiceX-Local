@@ -268,6 +268,6 @@ def test_local_deliver_applies_logging_level_over_existing_handlers(
     assert root.level == logging.DEBUG
 
 
-def test_config_logging_level_default_is_info():
-    "Default logging_level is INFO (a recognised level name)."
-    assert Config(version="25.2.41").logging_level == "INFO"
+def test_config_logging_level_default_is_warning():
+    "Default logging_level is WARNING (a recognised level name)."
+    assert Config(version="25.2.41").logging_level == "WARNING"
