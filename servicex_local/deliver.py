@@ -172,6 +172,9 @@ async def deliver_async(
     return results
 
 
+deliver = make_sync(deliver_async)
+
+
 _DOCKER_IMAGE = "sslhep/servicex_func_adl_xaod_transformer"
 
 
@@ -188,9 +191,9 @@ def local_deliver(
     sx_platform = _SxPlatform(config.platform.value)
     adaptor = install_sx_local(image, sx_platform)
 
-    sx_result = make_sync(deliver_async(
+    sx_result = deliver(
         spec, adaptor=adaptor, ignore_local_cache=config.ignore_cache
-    ))
+    )
 
     if config.awk:
         return to_awk(sx_result)["MySample"]
