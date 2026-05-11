@@ -1,5 +1,6 @@
 import getpass
 import logging
+import os
 import tempfile
 import uuid
 from datetime import datetime
@@ -204,6 +205,56 @@ def test_local_deliver_awk_true_returns_awk_for_mysample(fake_install):
 
     assert r == "awk_array_obj"
     assert mock_to_awk.call_count == 1
+
+def _basic_spec() -> ServiceXSpec:
+    return ServiceXSpec(
+        General=General(),
+        Sample=[
+            Sample(
+                Name="test_me",
+                Dataset=dataset.FileList("test.root"),
+                Query="query1",
+            )
+        ],
+    )
+
+
+def test_deliver_warns_for_ignored_upstream_kwarg(simple_adaptor, caplog):
+    "Passing an upstream-only kwarg logs a warning naming it."
+    with caplog.at_level(logging.WARNING, logger="servicex_local.deliver"):
+        deliver(_basic_spec(), adaptor=simple_adaptor, progress_bar="compact")
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    msg = warnings[0].getMessage()
+    assert "ignored in servicex-local" in msg
+    assert "progress_bar" in msg
+
+
+def test_deliver_warns_for_multiple_ignored_kwargs(simple_adaptor, caplog):
+    "All ignored upstream kwargs are listed in a single warning."
+    with caplog.at_level(logging.WARNING, logger="servicex_local.deliver"):
+        deliver(
+            _basic_spec(),
+            adaptor=simple_adaptor,
+            progress_bar="compact",
+            concurrency=4,
+            servicex_name="prod",
+        )
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    msg = warnings[0].getMessage()
+    for name in ("progress_bar", "concurrency", "servicex_name"):
+        assert name in msg
+
+
+def test_deliver_no_warning_when_no_extra_kwargs(simple_adaptor, caplog):
+    "No warning when only supported arguments are passed."
+    with caplog.at_level(logging.WARNING, logger="servicex_local.deliver"):
+        deliver(_basic_spec(), adaptor=simple_adaptor, ignore_local_cache=True)
+
+    assert not [r for r in caplog.records if r.levelno == logging.WARNING]
 
 
 def test_local_deliver_ignore_cache_true_resubmits(fake_install):
