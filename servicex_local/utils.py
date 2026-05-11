@@ -24,8 +24,6 @@ def install_sx_local(
     Returns:
         Tuple[str, SXLocalAdaptor]: Codegen name, adaptor.
     """
-    from pathlib import Path
-
     from servicex_local import LocalXAODCodegen, SXLocalAdaptor
     from servicex.configuration import Configuration
 

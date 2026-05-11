@@ -1,6 +1,5 @@
 import getpass
 import logging
-import os
 import tempfile
 import uuid
 from datetime import datetime
@@ -19,6 +18,7 @@ from servicex.models import (
 
 from servicex_local import local_deliver
 from servicex_local.configurations import Config
+from servicex_local.deliver import deliver
 
 
 @pytest.fixture(autouse=True)
@@ -205,6 +205,7 @@ def test_local_deliver_awk_true_returns_awk_for_mysample(fake_install):
 
     assert r == "awk_array_obj"
     assert mock_to_awk.call_count == 1
+
 
 def _basic_spec() -> ServiceXSpec:
     return ServiceXSpec(

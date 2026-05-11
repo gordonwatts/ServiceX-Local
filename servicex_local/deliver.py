@@ -16,14 +16,12 @@ from servicex.servicex_client import GuardList
 from servicex_local import SXLocalAdaptor
 from servicex_local.adaptor import MinioLocalAdaptor
 
-from func_adl import ObjectStream
 from .configurations import Config
 
 from servicex_local.utils import install_sx_local
 from servicex_local.utils import Platform as _SxPlatform
 from servicex_analysis_utils import to_awk
 
-import logging
 
 def _sample_run_info(
     g: General, samples: List[Sample]
@@ -228,7 +226,7 @@ def local_deliver(
 
     logging.basicConfig(level=config.logging_level, force=True)
 
-    if(config.platform.value == "singularity"):
+    if config.platform.value == "singularity":
         image = f"docker://{_DOCKER_IMAGE}:{config.version}"
     else:
         image = f"{_DOCKER_IMAGE}:{config.version}"
