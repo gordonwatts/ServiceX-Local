@@ -4,6 +4,7 @@ from typing import Optional
 from zipfile import ZipFile
 from requests_toolbelt.multipart import decoder
 from pathlib import Path
+import socket
 import subprocess
 import shutil
 
@@ -126,6 +127,12 @@ class DockerCodegen(SXCodeGen):
         safe_image = self.image_name.replace(":", "_").replace("/", "_")
         container_name = f"sx_codegen_container_{safe_image}"
 
+        # Pick an ephemeral host port — port 5000 is often taken on macOS
+        # (AirPlay Receiver), so don't hardcode it.
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("", 0))
+            host_port = s.getsockname()[1]
+
         try:
             # Run the docker container in the background
             subprocess.run(
@@ -135,10 +142,12 @@ class DockerCodegen(SXCodeGen):
                     "--name",
                     container_name,
                     "-d",  # Run in detached mode
+                    "--platform",
+                    "linux/amd64",
                     "-v",
                     f"{directory}:/output",
                     "-p",
-                    "5000:5000",
+                    f"{host_port}:5000",
                     self.image_name,
                 ],
                 check=True,
@@ -148,7 +157,7 @@ class DockerCodegen(SXCodeGen):
             # Next, run the query against the code generator.
             @retry(stop=stop_after_attempt(10), wait=wait_fixed(1))
             def run_query(query: str):
-                post_url = f"http://localhost:{5000}"
+                post_url = f"http://localhost:{host_port}"
                 postObj = {"code": query}
                 r = requests.post(post_url + "/servicex/generated-code", json=postObj)
                 r.raise_for_status()

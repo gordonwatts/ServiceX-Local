@@ -1,15 +1,22 @@
 import logging
 import os
+import re
 import subprocess
 from abc import ABC, abstractmethod
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
-
-from .logging_decorator import log_to_file
 
 
 def run_command_with_logging(command: List[str], log_file: Path) -> None:
     """Run a command in a subprocess and log the output.
+
+    The container's full stdout is written directly to ``log_file`` so the
+    file is a complete record of the run regardless of the active logging
+    level. Lines containing "error" or "warning" are also emitted via the
+    standard logger so they reach the user's console handlers; ordinary
+    lines go through ``logger.debug`` and are filtered out at the default
+    WARNING level.
 
     Args:
         command (List[str]): The command to run
@@ -18,11 +25,15 @@ def run_command_with_logging(command: List[str], log_file: Path) -> None:
     Raises:
         RuntimeError: If the command fails
     """
+    logger = logging.getLogger(__name__)
 
-    @log_to_file(log_file)
-    def do_the_work():
-        logger = logging.getLogger(__name__)
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(log_file, "a") as lf:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        lf.write(f"{timestamp} - Running command: {' '.join(command)}\n")
+        lf.flush()
         logger.debug("Running command: %s", " ".join(command))
+
         process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
@@ -39,6 +50,12 @@ def run_command_with_logging(command: List[str], log_file: Path) -> None:
         for stdout_line in iter(process.stdout.readline, ""):
             stripped_line = stdout_line.strip()
             stdout_lines.append(stripped_line)
+
+            # File log is written unconditionally so it remains a complete
+            # transcript of the run.
+            lf.write(stripped_line + "\n")
+            lf.flush()
+
             emitted_level: Optional[int] = None
             if (emit_next_line_level == logging.ERROR) or (
                 "error" in stripped_line.lower()
@@ -61,7 +78,9 @@ def run_command_with_logging(command: List[str], log_file: Path) -> None:
         return_code = process.wait()
 
         if return_code != 0:
-            # Output the log as info
+            # On failure, dump the captured output through the logger at
+            # INFO so the user gets context about what went wrong even at
+            # default WARNING level the user gets the warning/error tail.
             for line in stdout_lines:
                 logger.info(line)
 
@@ -71,8 +90,6 @@ def run_command_with_logging(command: List[str], log_file: Path) -> None:
                 f"Failed to run SX science payload locally with exit_code={return_code} "
                 f"({' '.join(command)}). See INFO python logging messages for more details"
             )
-
-    do_the_work()
 
 
 def write_file_runner_script(generated_files_dir: Path) -> None:
@@ -338,13 +355,18 @@ class DockerScienceImage(BaseScienceImage):
             x509up_volume = ["-v", f"{x509up_path}:/tmp/grid-security/x509up"]
         else:
             logger = logging.getLogger(__name__)
-            logger.warning("x509up certificate not found at /tmp/x509up")
+            logger.info("x509up certificate not found at /tmp/x509up")
             x509up_volume = []
 
         for input_file in input_files:
             safe_image = self.image_name.replace(":", "_").replace("/", "_")
+            # Docker container names only allow [a-zA-Z0-9][a-zA-Z0-9_.-];
+            # strip any URL query string (e.g. ?access_token=...) before
+            # extracting the stem, then replace any remaining illegal chars.
+            raw_stem = Path(input_file.split("?", 1)[0]).stem
+            safe_stem = re.sub(r"[^a-zA-Z0-9_.-]", "_", raw_stem)
             container_name = (
-                f"sx_codegen_container_{safe_image}_{Path(input_file).stem}"
+                f"sx_codegen_container_{safe_image}_{safe_stem}"
             )
 
             output_name = Path(input_file).name
@@ -466,7 +488,7 @@ class SingularityScienceImage(BaseScienceImage):
             x509up_volume = ["--bind", f"{x509up_path}:/tmp/grid-security/x509up"]
         else:
             logger = logging.getLogger(__name__)
-            logger.warning("x509up certificate not found at /tmp/x509up")
+            logger.info("x509up certificate not found at /tmp/x509up")
             x509up_volume = []
 
         for input_file in input_files:
