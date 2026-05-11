@@ -145,7 +145,7 @@ def test_local_deliver_docker_image_string(fake_install):
     _, captured = fake_install
     config = Config(version="25.2.41", platform="docker")
 
-    r = local_deliver(_spec(), config)
+    r = local_deliver(_spec(), config, display_progress=False)
 
     assert r is not None
     assert "MySample" in r
@@ -160,7 +160,7 @@ def test_local_deliver_singularity_image_string(fake_install):
     _, captured = fake_install
     config = Config(version="25.2.41", platform="singularity")
 
-    local_deliver(_spec(), config)
+    local_deliver(_spec(), config, display_progress=False)
 
     assert (
         captured["image"]
@@ -173,7 +173,7 @@ def test_local_deliver_wsl2_image_string(fake_install):
     _, captured = fake_install
     config = Config(version="25.2.41", platform="wsl2")
 
-    local_deliver(_spec(), config)
+    local_deliver(_spec(), config, display_progress=False)
 
     assert (
         captured["image"]
@@ -185,7 +185,7 @@ def test_local_deliver_awk_false_returns_dict(fake_install):
     "awk=False returns the deliver dict keyed by sample name."
     config = Config(version="25.2.41", awk=False)
 
-    r = local_deliver(_spec(), config)
+    r = local_deliver(_spec(), config, display_progress=False)
 
     assert isinstance(r, dict)
     assert "MySample" in r
@@ -200,7 +200,7 @@ def test_local_deliver_awk_true_returns_awk_for_mysample(fake_install):
     with patch(
         "servicex_local.deliver.to_awk", return_value=fake_awk
     ) as mock_to_awk:
-        r = local_deliver(_spec(), config)
+        r = local_deliver(_spec(), config, display_progress=False)
 
     assert r == "awk_array_obj"
     assert mock_to_awk.call_count == 1
@@ -211,8 +211,8 @@ def test_local_deliver_ignore_cache_true_resubmits(fake_install):
     adaptor, _captured = fake_install
     config = Config(version="25.2.41", ignore_cache=True)
 
-    local_deliver(_spec(), config)
-    local_deliver(_spec(), config)
+    local_deliver(_spec(), config, display_progress=False)
+    local_deliver(_spec(), config, display_progress=False)
 
     assert adaptor.submit_called == 2
 
@@ -222,8 +222,8 @@ def test_local_deliver_ignore_cache_false_uses_cache(fake_install):
     adaptor, _captured = fake_install
     config = Config(version="25.2.41", ignore_cache=False)
 
-    local_deliver(_spec(), config)
-    local_deliver(_spec(), config)
+    local_deliver(_spec(), config, display_progress=False)
+    local_deliver(_spec(), config, display_progress=False)
 
     assert adaptor.submit_called == 1
 
@@ -263,7 +263,7 @@ def test_local_deliver_applies_logging_level_over_existing_handlers(
     root.setLevel(logging.WARNING)
 
     config = Config(version="25.2.41", logging_level="DEBUG")
-    local_deliver(_spec(), config)
+    local_deliver(_spec(), config, display_progress=False)
 
     assert root.level == logging.DEBUG
 

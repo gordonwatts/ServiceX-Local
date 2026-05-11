@@ -6,6 +6,7 @@ from typing import Any, Generator, List
 
 from make_it_sync import make_sync
 from servicex import General, ResultDestination, Sample, ServiceXSpec
+from servicex.expandable_progress import ExpandableProgress
 from servicex.models import ResultFormat, TransformRequest, TransformStatus
 from servicex.query_core import QueryStringGenerator
 from servicex.servicex_client import GuardList
@@ -119,56 +120,73 @@ async def deliver_async(
     spec: ServiceXSpec,
     adaptor: SXLocalAdaptor,
     ignore_local_cache: bool = False,
+    display_progress: bool = True,
     **kwargs,
 ) -> dict[str, GuardList] | None:
 
     results: dict[str, GuardList] = {}
     cache = _load_cache(adaptor.cache_dir)  # Load cache from file system
 
-    # Run the samples one by one.
-    for tq in _sample_run_info(spec.General, spec.Sample):
-        cache_key = _generate_cache_key(tq)
+    all_tqs = list(_sample_run_info(spec.General, spec.Sample))
+    total_files = sum(len(tq.file_list or []) for tq in all_tqs)
 
-        if cache_key in cache and not ignore_local_cache:
-            info = cache[cache_key]
-            info["submit_time"] = datetime.fromisoformat(info["submit_time"])
-            info["finish_time"] = (
-                datetime.fromisoformat(info["finish_time"])
-                if info["finish_time"] is not None
-                else None
-            )
-            info = {
-                k.replace("_", "-") if k not in ("request_id", "did_id") else k: v
-                for k, v in info.items()
-            }
+    with ExpandableProgress(display_progress=display_progress) as progress:
+        transform_task = progress.add_task(
+            "Transform", start=True, total=total_files
+        )
 
-            status = TransformStatus(**info)
-        else:
-            # Do the transform and get status
-            request_id = await adaptor.submit_transform(tq)
-            status = await adaptor.get_transform_status(request_id)
-            info = status.model_dump()
-            info["submit_time"] = info["submit_time"].isoformat()
-            info["finish_time"] = (
-                info["finish_time"].isoformat()
-                if info["finish_time"] is not None
-                else None
-            )
+        for tq in all_tqs:
+            cache_key = _generate_cache_key(tq)
 
-            cache[cache_key] = info
-            _save_cache(cache, adaptor.cache_dir)
+            if cache_key in cache and not ignore_local_cache:
+                info = cache[cache_key]
+                info["submit_time"] = datetime.fromisoformat(info["submit_time"])
+                info["finish_time"] = (
+                    datetime.fromisoformat(info["finish_time"])
+                    if info["finish_time"] is not None
+                    else None
+                )
+                info = {
+                    k.replace("_", "-") if k not in ("request_id", "did_id") else k: v
+                    for k, v in info.items()
+                }
 
-        # Build the list of results.
-        minio_results = MinioLocalAdaptor.for_transform(status)
-        download_dir = adaptor.cache_dir / status.request_id
-        files = [
-            await minio_results.download_file(n.filename, download_dir)
-            for n in await minio_results.list_bucket()
-        ]
-        outputs = GuardList(files)
+                status = TransformStatus(**info)
+            else:
+                request_id = await adaptor.submit_transform(tq)
+                status = await adaptor.get_transform_status(request_id)
+                info = status.model_dump()
+                info["submit_time"] = info["submit_time"].isoformat()
+                info["finish_time"] = (
+                    info["finish_time"].isoformat()
+                    if info["finish_time"] is not None
+                    else None
+                )
 
-        title = tq.title if tq.title is not None else "local-run-dataset"
-        results[title] = outputs
+                cache[cache_key] = info
+                _save_cache(cache, adaptor.cache_dir)
+
+            # Build the list of results.
+            minio_results = MinioLocalAdaptor.for_transform(status)
+            download_dir = adaptor.cache_dir / status.request_id
+            files = [
+                await minio_results.download_file(n.filename, download_dir)
+                for n in await minio_results.list_bucket()
+            ]
+
+            outputs = GuardList(files)
+
+            title = tq.title if tq.title is not None else "local-run-dataset"
+            results[title] = outputs
+
+        progress.update(
+            transform_task,
+            "Transform",
+            total=total_files,
+            completed=total_files,
+            refresh=True,
+        )
+        progress.refresh()
 
     return results
 
@@ -182,6 +200,7 @@ _DOCKER_IMAGE = "sslhep/servicex_func_adl_xaod_transformer"
 def local_deliver(
     spec: ServiceXSpec,
     config: Config,
+    display_progress: bool = True,
 ):
     """Run a query against a dataset, either locally or remotely."""
 
@@ -195,7 +214,10 @@ def local_deliver(
     adaptor = install_sx_local(image, sx_platform)
 
     sx_result = deliver(
-        spec, adaptor=adaptor, ignore_local_cache=config.ignore_cache
+        spec,
+        adaptor=adaptor,
+        ignore_local_cache=config.ignore_cache,
+        display_progress=display_progress,
     )
 
     if config.awk:

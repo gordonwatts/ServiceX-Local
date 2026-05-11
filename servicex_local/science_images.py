@@ -355,7 +355,7 @@ class DockerScienceImage(BaseScienceImage):
             x509up_volume = ["-v", f"{x509up_path}:/tmp/grid-security/x509up"]
         else:
             logger = logging.getLogger(__name__)
-            logger.warning("x509up certificate not found at /tmp/x509up")
+            logger.info("x509up certificate not found at /tmp/x509up")
             x509up_volume = []
 
         for input_file in input_files:
@@ -488,7 +488,7 @@ class SingularityScienceImage(BaseScienceImage):
             x509up_volume = ["--bind", f"{x509up_path}:/tmp/grid-security/x509up"]
         else:
             logger = logging.getLogger(__name__)
-            logger.warning("x509up certificate not found at /tmp/x509up")
+            logger.info("x509up certificate not found at /tmp/x509up")
             x509up_volume = []
 
         for input_file in input_files:
