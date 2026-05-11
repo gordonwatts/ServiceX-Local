@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Generator, List
+from deprecated import deprecated
 
 from make_it_sync import make_sync
 from servicex import General, ResultDestination, Sample, ServiceXSpec
@@ -209,7 +210,10 @@ async def deliver_async(
     return results
 
 
-deliver = make_sync(deliver_async)
+_deliver_sync = make_sync(deliver_async)
+deliver = deprecated(
+    reason="Use local_deliver instead. Requires setting up Config.",
+)(_deliver_sync)
 
 
 _DOCKER_IMAGE = "sslhep/servicex_func_adl_xaod_transformer"
@@ -231,7 +235,7 @@ def local_deliver(
     sx_platform = _SxPlatform(config.platform.value)
     adaptor = install_sx_local(image, sx_platform)
 
-    sx_result = deliver(
+    sx_result = _deliver_sync(
         spec,
         adaptor=adaptor,
         ignore_local_cache=config.ignore_cache,
