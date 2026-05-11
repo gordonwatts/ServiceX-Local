@@ -108,6 +108,12 @@ def _make_adaptor(cache_dir: Path):
 
 
 @pytest.fixture
+def simple_adaptor():
+    cache_dir = Path(tempfile.gettempdir()) / f"servicex_{getpass.getuser()}"
+    return _make_adaptor(cache_dir)
+
+
+@pytest.fixture
 def fake_install(tmp_path):
     """Patch install_sx_local so local_deliver gets a stub adaptor.
 
