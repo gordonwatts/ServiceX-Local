@@ -444,6 +444,16 @@ class DockerScienceImage(BaseScienceImage):
                 )
                 output_paths.append(output_directory / Path(input_file).name)
 
+            except RuntimeError as e:
+                log_file = generated_files_dir / "docker_log.txt"
+                if log_file.exists() and "is already in use by container" in log_file.read_text():
+                    raise RuntimeError(
+                        f"Docker container '{container_name}' already exists from a previous "
+                        "run. This usually happens when the kernel is restarted before the "
+                        "container finishes. Please restart Docker Desktop to remove stale "
+                        "containers, then try again."
+                    ) from e
+                raise
             except subprocess.CalledProcessError as e:
                 raise RuntimeError(
                     f"Failed to start docker container for {input_file}: "
