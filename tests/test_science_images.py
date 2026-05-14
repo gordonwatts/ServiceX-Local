@@ -428,7 +428,7 @@ def test_docker_container_conflict_error(tmp_path: Path):
 
     from unittest.mock import patch
 
-    def mock_run_command_with_logging(command, log_file):
+    def mock_run_command_with_logging(command, log_file, suppress_patterns=None):
         log_file.parent.mkdir(parents=True, exist_ok=True)
         log_file.write_text(
             "Error response from daemon: Conflict. The container name "
@@ -464,7 +464,7 @@ def test_docker_command(tmp_path: Path):
 
     captured_command = {}
 
-    def mock_run_command_with_logging(command, log_file):
+    def mock_run_command_with_logging(command, log_file, suppress_patterns=None):
         captured_command["command"] = command
         captured_command["log_file"] = log_file
 
@@ -501,7 +501,7 @@ def test_docker_command_memory_limit(tmp_path: Path):
 
     captured_command = {}
 
-    def mock_run_command_with_logging(command, log_file):
+    def mock_run_command_with_logging(command, log_file, suppress_patterns=None):
         captured_command["command"] = command
         captured_command["log_file"] = log_file
 

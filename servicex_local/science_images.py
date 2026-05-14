@@ -20,7 +20,9 @@ def run_command_with_logging(
     level. Lines containing "error" or "warning" are also emitted via the
     standard logger so they reach the user's console handlers; ordinary
     lines go through ``logger.debug`` and are filtered out at the default
-    WARNING level.
+    WARNING level. Once a line is emitted at ERROR or WARNING, subsequent
+    non-blank lines inherit that level until a blank line resets the context,
+    so multi-line error blocks are fully promoted.
 
     Args:
         command (List[str]): The command to run
@@ -81,9 +83,7 @@ def run_command_with_logging(
             else:
                 logger.debug(stripped_line)
 
-            emit_next_line_level = None
-            if stripped_line.endswith(":"):
-                emit_next_line_level = emitted_level
+            emit_next_line_level = emitted_level if stripped_line else None
 
         process.stdout.close()
         return_code = process.wait()
