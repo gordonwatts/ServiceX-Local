@@ -1,8 +1,6 @@
 import pytest
-from servicex_local import DockerCodegen
+from servicex_local.codegen import DockerCodegen, LocalXAODCodegen
 from pathlib import Path
-
-from servicex_local import LocalXAODCodegen
 
 
 def test_docker_codegen_xaod(tmp_path, request):
