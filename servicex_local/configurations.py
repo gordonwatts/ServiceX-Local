@@ -4,7 +4,15 @@ import logging
 import urllib.request
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Union
-from .utils import Platform
+from enum import Enum
+
+
+class Platform(Enum):
+    """Options for which platform to use for the runtime environment."""
+
+    docker = "docker"
+    singularity = "singularity"
+    wsl2 = "wsl2"
 
 
 if TYPE_CHECKING:
