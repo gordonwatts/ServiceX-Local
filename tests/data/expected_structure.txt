@@ -1,0 +1,22 @@
+
+---------------------------
+📁 Sample: test_file
+---------------------------
+
+File Metadata ℹ️ :
+
+No FileMetaData found in dataset.
+
+---------------------------
+
+File structure with branch filter 🌿 '':
+
+
+🌳 Tree: background
+   ├── Branches:
+   │   ├── branch1 ; dtype: AsDtype('>f8')
+   │   ├── branch2 ; dtype: AsDtype('>f8')
+
+🌳 Tree: signal
+   ├── Branches:
+   │   ├── branch1 ; dtype: AsDtype('>f8')
