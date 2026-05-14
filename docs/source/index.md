@@ -33,7 +33,6 @@ This guide is organized into the following sections:
 | [Install and Setup](setup.md) | How to install LocalX and pick a simulation platform |
 | [Configuration](configuration.md) | How to configure LocalX with the `Config` and `xAODConfig` classes |
 | [Using local_deliver](local_deliver.md) | How to submit a ServiceX Spec to the local backend |
-| [Inspecting Local File Structure](local_get_structure.md) | How to explore ROOT file structure with `local_get_structure()` |
 
 ```{toctree}
 :hidden:
@@ -41,5 +40,4 @@ This guide is organized into the following sections:
 setup
 configuration
 local_deliver
-local_get_structure
 ```
