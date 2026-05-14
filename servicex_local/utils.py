@@ -112,7 +112,7 @@ def build_deliver_spec(datasets):
         {
             "NFiles": 1,
             "Name": name,
-            "Dataset": dataset.FileList([did]),
+            "Dataset": did if isinstance(did, DataSetIdentifier) else dataset.Rucio(did),
             "Query": query_PythonFunction,
         }
         for name, did in dataset_dict.items()
@@ -166,7 +166,10 @@ def print_structure_from_str(
     for sample_name, structure_str in json_by_sample.items():
         if structure_str is None:
             continue
-        # Parse the JSON string into a dictionary
+        if isinstance(structure_str, list):
+            structure_str = open_delivered_file(sample_name, structure_str)
+        if structure_str is None:
+            continue
         structure_dict = json.loads(structure_str)
 
         output_lines.append(

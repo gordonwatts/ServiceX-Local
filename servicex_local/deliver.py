@@ -242,7 +242,6 @@ async def deliver_async(
     cache = _load_cache(adaptor.cache_dir)  # Load cache from file system
 
     config = _load_ServiceXSpec(spec)
-    print(config)
 
     all_tqs = list(_sample_run_info(config.General, config.Sample))
     total_files = sum(len(tq.file_list or []) for tq in all_tqs)

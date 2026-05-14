@@ -1,0 +1,19 @@
+
+---------------------------
+📁 Sample: test_file
+---------------------------
+
+File Metadata ℹ️ :
+
+── test_100: 100
+── test_abc: abc
+
+---------------------------
+
+File structure with branch filter 🌿 '':
+
+
+🌳 Tree: MetaData
+   ├── Branches:
+   │   ├── FileMetaDataAuxDyn.test_100 ; dtype: AsDtype('>i8')
+   │   ├── FileMetaDataAuxDyn.test_abc ; dtype: AsStrings()
