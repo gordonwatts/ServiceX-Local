@@ -152,7 +152,7 @@ with open(os.path.join(script_dir, "transformer_capabilities.json")) as f:
 
 file_to_run = info["command"]
 if file_to_run.startswith("/generated/"):
-    file_to_run = os.path.join(script_dir, file_to_run.removeprefix("/generated/"))
+    file_to_run = os.path.join(script_dir, file_to_run[len("/generated/"):])
 elif not os.path.isabs(file_to_run):
     file_to_run = os.path.join(script_dir, file_to_run)
 
@@ -283,7 +283,7 @@ with open(os.path.join(script_dir, "transformer_capabilities.json")) as f:
 
 file_to_run = info["command"]
 if file_to_run.startswith("/generated/"):
-    file_to_run = os.path.join(script_dir, file_to_run.removeprefix("/generated/"))
+    file_to_run = os.path.join(script_dir, file_to_run[len("/generated/"):])
 elif not os.path.isabs(file_to_run):
     file_to_run = os.path.join(script_dir, file_to_run)
 
