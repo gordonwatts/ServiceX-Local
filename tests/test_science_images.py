@@ -419,6 +419,39 @@ def test_docker_science_log_warnings(tmp_path, caplog, request):
     assert "this is log line 2" in written_log
 
 
+def test_docker_container_conflict_error(tmp_path: Path):
+    generated_file_directory, actual_input_files, output_file_directory = (
+        prepare_input_files(
+            tmp_path, "tests/genfiles_raw/query7_logging_warnings", ["file1.root"]
+        )
+    )
+
+    from unittest.mock import patch
+
+    def mock_run_command_with_logging(command, log_file):
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        log_file.write_text(
+            "Error response from daemon: Conflict. The container name "
+            '"/sx_codegen_container_foo" is already in use by container "abc123".'
+        )
+        raise RuntimeError("Failed to run SX science payload locally with exit_code=125")
+
+    with patch(
+        "servicex_local.science_images.run_command_with_logging",
+        side_effect=mock_run_command_with_logging,
+    ):
+        docker = DockerScienceImage(
+            "sslhep/servicex_func_adl_uproot_transformer:uproot5"
+        )
+        with pytest.raises(RuntimeError, match="restart Docker Desktop"):
+            docker.transform(
+                generated_file_directory,
+                actual_input_files,
+                output_file_directory,
+                "root-file",
+            )
+
+
 def test_docker_command(tmp_path: Path):
 
     generated_file_directory, actual_input_files, output_file_directory = (
