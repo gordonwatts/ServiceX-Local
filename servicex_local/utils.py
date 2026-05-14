@@ -5,7 +5,6 @@ import uproot
 import numpy as np
 import awkward as ak
 import json
-import logging
 from servicex.dataset_identifier import DataSetIdentifier
 
 
@@ -73,11 +72,12 @@ def build_deliver_spec(datasets):
     Supports multiple inputs for multiple sample queries.
 
     Parameters:
-    datasets (str, [str], dict, DataSetIdentifier): Rucio DIDs (str) or DataSetIdentifier object.
-                                                    If dict, custom names can be inputed for each dataset
+    datasets (str, [str], dict, DataSetIdentifier): Rucio DIDs (str) or DataSetIdentifier.
+                                                    If dict, custom names can be given per dataset
 
     Returns:
-    spec_python (dict): The specification for the python function query containing Name, Query, Dataset, NFiles
+    spec_python (dict): The specification for the python function query containing
+                        Name, Query, Dataset, NFiles
     """
     # Servicex query using the PythonFunction backend
     query_PythonFunction = query.PythonFunction().with_uproot_function(run_query)
@@ -238,12 +238,12 @@ def parse_jagged_depth_and_dtype(dtype_str):
     while current.startswith("AsJagged("):
         depth += 1
         current = current[
-            len("AsJagged(") : -1
+            len("AsJagged("):-1
         ].strip()  # Strip outermost wrapper, up to -1 to remove )
 
     # Extract the base dtype string from AsDtype('<np-format>')
     if current.startswith("AsDtype('") and current.endswith("')"):
-        base_dtype = current[len("AsDtype('") : -2]
+        base_dtype = current[len("AsDtype('"):-2]
         return depth, base_dtype
     else:
         return depth, None
@@ -258,7 +258,8 @@ def str_to_array(encoded_json_str):
         encoded_json_str (str): JSON string from run_query.
 
     Returns:
-        ak.Array: An array containing a dictionary of trees with branch structures and dummy typed values.
+        ak.Array: An array containing a dictionary of trees with branch structures
+                  and dummy typed values.
     """
     reconstructed_data = {}
     structure_dict = json.loads(encoded_json_str)
@@ -301,7 +302,8 @@ def local_get_structure(datasets, config: Config, array_out=False, **kwargs):
 
     Parameters:
       datasets (dict,str,[str]): The datasets from which to print the file structures.
-                                A custom sample name per dataset can be given in a dict form: {'sample_name':'file_path'}
+                                A custom sample name per dataset can be given in a dict form:
+                                {'sample_name':'file_path'}
       kwargs : Arguments to be propagated to print_structure_from_str
     """
     user_in = type(datasets)

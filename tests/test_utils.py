@@ -68,10 +68,10 @@ def test_encoding(build_encoding_samples, tmp_path, capsys):
         file["servicex"] = tree_data
     assert os.path.exists(
         tmp_path / "encoded.root"
-    ), f"servicex-like test file not found."
+    ), "servicex-like test file not found."
     deliver_dict = {"test_file": [str(tmp_path / "encoded.root")]}
 
-    ## Test str formating on the deliver-like dict
+    # Test str formating on the deliver-like dict
     # save_to_txt
     utils.print_structure_from_str(deliver_dict, save_to_txt=True)
     out_txt = "samples_structure.txt"
@@ -138,7 +138,7 @@ def test_spec_builder():
         first_entry["Query"], PythonFunction
     ), "'Query' should be a PythonFunction"
 
-    ##Different input types
+    # Different input types
     # list with two DIDs
     test_did_list = [test_did_str, test_did_str + "2"]
     spec_from_list = utils.build_deliver_spec(test_did_list)
@@ -209,7 +209,10 @@ def test_spec_builder_with_dataset_identifier():
 
         assert isinstance(
             first_entry["Dataset"], did_type
-        ), f"Input Dataset identifier {did} should be a {did_type} but is {type(first_entry['Dataset'])}"
+        ), (
+            f"Input Dataset identifier {did} should be a {did_type} "
+            f"but is {type(first_entry['Dataset'])}"
+        )
 
 
 def test_decoding_to_array(build_encoding_samples, array_out=True):
@@ -223,9 +226,12 @@ def test_decoding_to_array(build_encoding_samples, array_out=True):
     assert isinstance(
         result, ak.types.arraytype.ArrayType
     ), "str_to_array does not return an awkward array type"
-    expected_type_str = "1 * {background: {branch1: var * float64, branch2: var * float64}, signal: {branch1: var * float64}}"
+    expected_type_str = (
+        "1 * {background: {branch1: var * float64, branch2: var * float64},"
+        " signal: {branch1: var * float64}}"
+    )
     assert str(result) == expected_type_str
-    
+
 
 @pytest.fixture
 def build_test_samples(tmp_path):
@@ -234,8 +240,14 @@ def build_test_samples(tmp_path):
 
     # Create tmp .root files
     with uproot.create(test_path) as file:
-        file.mktree("MetaData", {"FileMetaDataAuxDyn.test_100": "int64", "FileMetaDataAuxDyn.test_abc": str})
-        file["MetaData"].extend({"FileMetaDataAuxDyn.test_100": np.array([100], dtype="int64"), "FileMetaDataAuxDyn.test_abc": ["abc"]})
+        file.mktree("MetaData", {
+            "FileMetaDataAuxDyn.test_100": "int64",
+            "FileMetaDataAuxDyn.test_abc": str,
+        })
+        file["MetaData"].extend({
+            "FileMetaDataAuxDyn.test_100": np.array([100], dtype="int64"),
+            "FileMetaDataAuxDyn.test_abc": ["abc"],
+        })
 
     return test_path
 
@@ -264,10 +276,10 @@ def test_metadata_retrieval(build_test_samples, tmp_path, capsys):
         file["servicex"] = tree_data
     assert os.path.exists(
         tmp_path / "encoded.root"
-    ), f"servicex-like test file not found."
+    ), "servicex-like test file not found."
     deliver_dict = {"test_file": [str(tmp_path / "encoded.root")]}
 
-    ## Test str formating
+    # Test str formating
     output_str = utils.print_structure_from_str(deliver_dict)
 
     expected_path = Path("tests/data/expected_metadata.txt")

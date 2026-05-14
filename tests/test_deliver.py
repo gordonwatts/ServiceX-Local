@@ -21,7 +21,11 @@ from servicex_local import local_deliver
 from servicex_local.configurations import Config
 from servicex_local.deliver import deliver, install_sx_local, Platform
 
-from servicex_local.science_images import DockerScienceImage, SingularityScienceImage, WSL2ScienceImage
+from servicex_local.science_images import (
+    DockerScienceImage,
+    SingularityScienceImage,
+    WSL2ScienceImage,
+)
 
 
 @pytest.fixture(autouse=True)
