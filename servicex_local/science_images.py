@@ -8,7 +8,11 @@ from pathlib import Path
 from typing import List, Optional
 
 
-def run_command_with_logging(command: List[str], log_file: Path) -> None:
+def run_command_with_logging(
+    command: List[str],
+    log_file: Path,
+    suppress_patterns: Optional[List[str]] = None,
+) -> None:
     """Run a command in a subprocess and log the output.
 
     The container's full stdout is written directly to ``log_file`` so the
@@ -21,6 +25,8 @@ def run_command_with_logging(command: List[str], log_file: Path) -> None:
     Args:
         command (List[str]): The command to run
         log_file (Path): The file to write log messages to
+        suppress_patterns (Optional[List[str]]): Substrings that, if found in
+            a line, downgrade it to DEBUG regardless of "warning"/"error" content.
 
     Raises:
         RuntimeError: If the command fails
@@ -57,13 +63,18 @@ def run_command_with_logging(command: List[str], log_file: Path) -> None:
             lf.flush()
 
             emitted_level: Optional[int] = None
-            if (emit_next_line_level == logging.ERROR) or (
-                "error" in stripped_line.lower()
+            line_lower = stripped_line.lower()
+            if suppress_patterns and any(
+                p.lower() in line_lower for p in suppress_patterns
+            ):
+                logger.debug(stripped_line)
+            elif (emit_next_line_level == logging.ERROR) or (
+                "error" in line_lower
             ):
                 logger.error(stripped_line)
                 emitted_level = logging.ERROR
             elif (emit_next_line_level == logging.WARNING) or (
-                "warning" in stripped_line.lower()
+                "warning" in line_lower
             ):
                 logger.warning(stripped_line)
                 emitted_level = logging.WARNING
@@ -440,7 +451,9 @@ class DockerScienceImage(BaseScienceImage):
                     output_format,
                 ]
                 run_command_with_logging(
-                    command, log_file=generated_files_dir / "docker_log.txt"
+                    command,
+                    log_file=generated_files_dir / "docker_log.txt",
+                    suppress_patterns=["x509up"],
                 )
                 output_paths.append(output_directory / Path(input_file).name)
 
@@ -561,7 +574,9 @@ class SingularityScienceImage(BaseScienceImage):
                         output_format,
                     ]
                     run_command_with_logging(
-                        command, log_file=generated_files_dir / "singularity_log.txt"
+                        command,
+                        log_file=generated_files_dir / "singularity_log.txt",
+                        suppress_patterns=["x509up"],
                     )
                     output_paths.append(output_directory / Path(input_file).name)
 
