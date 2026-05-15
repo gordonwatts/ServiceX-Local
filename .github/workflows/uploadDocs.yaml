@@ -20,28 +20,50 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     runs-on: ubuntu-latest
+
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Run Pip
-        run: pip install "Sphinx>=7.0.1,<9" furo>=2023.5.20 sphinx-copybutton>=0.5.2 myst-parser>=3.0.1 sphinx-code-include>=1.4.0 func-adl-servicex-xaodr22 autodoc-pydantic==2.2.0 sphinx-tabs>=3.4.5 enum-tools[sphinx]>=0.12.0 servicex servicex_analysis_utils sphinx_design
-      
-      - name: Checkout 15 Minute Docs
-        uses: actions/checkout@v4
-      - name: Build 15 Minute Sphinx documentation
+
+      - name: Install dependencies
+        run: |
+          pip install "Sphinx>=7.0.1,<9" \
+            "furo>=2023.5.20" \
+            "sphinx-copybutton>=0.5.2" \
+            "myst-parser>=3.0.1" \
+            "sphinx-code-include>=1.4.0" \
+            "func-adl-servicex-xaodr22" \
+            "autodoc-pydantic==2.2.0" \
+            "sphinx-tabs>=3.4.5" \
+            "enum-tools[sphinx]>=0.12.0" \
+            servicex \
+            servicex_analysis_utils \
+            sphinx_design
+
+      - name: Install local package
+        run: pip install -e .
+
+      - name: Build Sphinx documentation
         working-directory: ${{ github.workspace }}/docs
         run: sphinx-build -b html source build/html
+
       - name: Setup Pages
         if: ${{ !env.ACT }}
         uses: actions/configure-pages@v5
+
       - name: Upload artifact
         if: ${{ !env.ACT }}
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'docs/build'
+          path: docs/build
+
       - name: Deploy to GitHub Pages
         if: ${{ !env.ACT }}
         id: deployment
