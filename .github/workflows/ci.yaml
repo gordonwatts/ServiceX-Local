@@ -73,7 +73,7 @@ jobs:
         if: matrix.platform == 'macOS-latest'
         run: |
           brew install colima docker
-          colima start
+          colima start --vm-type=qemu
       - name: Test with pytest
         run: |
           python -m pytest --docker
