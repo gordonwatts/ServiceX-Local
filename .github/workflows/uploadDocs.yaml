@@ -3,6 +3,8 @@ name: Build Documentation and Deploy to GitHub Pages
 on:
   push:
     branches: ["main"]
+    paths:
+      - "docs/**"
 
   workflow_dispatch:
 
