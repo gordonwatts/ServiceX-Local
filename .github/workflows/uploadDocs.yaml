@@ -62,7 +62,7 @@ jobs:
         if: ${{ !env.ACT }}
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/build
+          path: docs/build/html
 
       - name: Deploy to GitHub Pages
         if: ${{ !env.ACT }}
