@@ -69,9 +69,11 @@ jobs:
           pip install git+https://github.com/iris-hep/ast-language.git@e6470deb68529e1885a4bc46f781e2fe43a6f4c8
           pip install --no-cache-dir -e .[test,local]
           pip list
-      - name: Install Docker on macOS
+      - name: Install and start Docker on macOS
         if: matrix.platform == 'macOS-latest'
-        run: brew install docker
+        run: |
+          brew install colima docker
+          colima start
       - name: Test with pytest
         run: |
           python -m pytest --docker
